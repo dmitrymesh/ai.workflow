@@ -1,6 +1,6 @@
 # AI Task Board
 
-Generated: 2026-05-03 00:00:23
+Generated: 2026-05-03 00:16:15
 
 ## Draft
 
@@ -33,6 +33,7 @@ _Empty_
 | AI-001 | Add task relationship support | medium | workflow, cli, docs | - | - | - |
 | AI-002 | Require human approval before ready | low | workflow, docs, skills | - | - | - |
 | AI-003 | Add git worktree execution workflow | medium | workflow, git, docs, cli | - | - | - |
+| AI-004 | Refactor ai_task CLI module | medium | workflow, cli, maintenance | - | - | - |
 
 ## Rejected
 
