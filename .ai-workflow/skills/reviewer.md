@@ -82,3 +82,19 @@ git -C ../ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow diff 
 If the diff includes files that are not in the task scope but were present in
 the main checkout at prepare-worktree time, flag them as a blocking issue. The
 executor should not have committed unrelated files.
+
+---
+
+## Consulting done task history
+
+When reviewing, check related done tasks to catch repeated issues or verify consistency with prior accepted patterns:
+
+1. If the task has `related` or `parent` links to done tasks, read those `review.md` and `decision.yaml` files to understand what was previously accepted or rejected.
+2. Use the `history` command to find done tasks in the same area if you suspect a recurring issue:
+   ```bash
+   python .ai-workflow/scripts/ai_task.py history --area <area>
+   python .ai-workflow/scripts/ai_task.py history --show <TASK-ID>
+   ```
+3. Read a full done task folder when reviewing a direct follow-up (parent/child relationship) or a protocol-level change.
+
+**Do not read all done tasks by default.** Only consult history when there is a concrete reason to believe prior decisions are relevant to the current review.

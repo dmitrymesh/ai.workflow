@@ -17,6 +17,10 @@ Usage:
   python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001 --print-only
   python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
   python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
+  python .ai-workflow/scripts/ai_task.py history
+  python .ai-workflow/scripts/ai_task.py history --area workflow
+  python .ai-workflow/scripts/ai_task.py history --keyword install
+  python .ai-workflow/scripts/ai_task.py history --show AI-005
 
 Module layout (all under .ai-workflow/scripts/):
   _core.py          constants, path utils, YAML, config, task discovery, relationship utils
@@ -26,6 +30,7 @@ Module layout (all under .ai-workflow/scripts/):
   _relationships.py link_tasks, unlink_tasks, show_task
   _worktree.py      prepare_worktree
   _install.py       install_plan
+  _history.py       history
   ai_task.py        init, build_parser, main  (this file — CLI entrypoint only)
 """
 
@@ -35,6 +40,7 @@ import argparse
 
 from _board import generate_board, list_tasks
 from _core import RELATIONSHIP_KINDS, STATUSES, ensure_structure, load_config, update_config_profile
+from _history import history
 from _install import install_plan
 from _relationships import link_tasks, show_task, unlink_tasks
 from _tasks import create_task, move_task, print_task_path
@@ -137,6 +143,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Create/update protocol-owned files in the target (never overwrites integration points)",
     )
     p_install.set_defaults(func=install_plan)
+
+    p_history = sub.add_parser(
+        "history",
+        help=(
+            "List completed (done) tasks. Filter by area or keyword, or read a "
+            "specific task's report with --show."
+        ),
+    )
+    p_history.add_argument("--area", default=None, help="Filter by area tag (e.g. workflow)")
+    p_history.add_argument("--keyword", default=None, help="Filter titles by keyword")
+    p_history.add_argument("--show", metavar="TASK_ID", default=None, help="Print report for a done task")
+    p_history.set_defaults(func=history)
 
     return parser
 

@@ -138,3 +138,33 @@ git branch -d ai/AI-003-add-git-worktree-execution-workflow  # after merging
 ```
 
 For rejected tasks, use `git branch -D` (force delete) if the branch was never merged.
+
+---
+
+## Consulting done task history
+
+Done task folders (`tasks/done/`) hold original scope (`task.md`), implementation decisions (`report.md`), and review outcomes (`review.md`, `decision.yaml`).
+
+**When to consult:**
+- Creating a follow-up task that overlaps with a completed one — read the related task's `report.md` for prior decisions and known risks.
+- A new task has `related`, `parent`, or `children` links pointing to done tasks.
+- Suspecting a recurring problem that a prior task may have addressed.
+
+**How to find relevant tasks:**
+```bash
+# List done tasks filtered by area
+python .ai-workflow/scripts/ai_task.py history --area workflow
+
+# Search by keyword in title
+python .ai-workflow/scripts/ai_task.py history --keyword install
+
+# Read a specific done task's implementation report
+python .ai-workflow/scripts/ai_task.py history --show AI-005
+```
+
+**Retrieval order:**
+1. Read `report.md` of tasks linked via `metadata.yaml` (`related`, `parent`, `children`).
+2. Use `history --area` or `history --keyword` to locate other candidates.
+3. Read a full task folder only for direct parent/child work or protocol audit.
+
+**Do not** read all done tasks by default. **Do not** treat `report.md` as a substitute for reading current source code — reports describe intent, not the present state of the codebase.

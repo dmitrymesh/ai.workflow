@@ -161,6 +161,56 @@ python .ai-workflow/scripts/ai_task.py validate
 
 `validate` checks folder/metadata status consistency, that all task files are present, that every task id is unique, and that relationship references are valid and reciprocal.
 
+---
+
+## Done task history
+
+Completed task folders in `tasks/done/` contain:
+
+| File | Contents |
+|---|---|
+| `task.md` | Original scope, requirements, acceptance criteria |
+| `report.md` | Implementation summary, changed files, known risks |
+| `review.md` + `decision.yaml` | Review outcome and blocking issues |
+| `validation.md` | Validation results |
+| `metadata.yaml` | Relationships (parent, children, related, blocks) |
+
+### Policy: targeted retrieval, not default loading
+
+**Do not read all done tasks by default.** Loading every completed task adds stale, irrelevant context and increases token cost without proportional benefit.
+
+Read done task history only when:
+- The current task has `related`, `parent`, or `children` links pointing to a done task — read that task's `report.md`.
+- You are creating or reviewing a follow-up task and need to understand prior decisions or known risks.
+- You are auditing protocol evolution or investigating a recurring issue.
+
+Prefer reading `report.md` over full task folders for broad orientation. Full folders are only warranted for direct parent/child work or formal audit.
+
+**Source of truth**: current source code and `task.md` take precedence over historical reports. A `report.md` describes what the executor intended; it may not reflect subsequent fixes or refactors.
+
+### history command
+
+```bash
+# List all done tasks
+python .ai-workflow/scripts/ai_task.py history
+
+# Filter by area tag
+python .ai-workflow/scripts/ai_task.py history --area workflow
+
+# Search by keyword in title
+python .ai-workflow/scripts/ai_task.py history --keyword install
+
+# Read a specific done task's implementation report
+python .ai-workflow/scripts/ai_task.py history --show AI-005
+```
+
+Without the CLI, use standard text search over done task folders:
+
+```bash
+# Find done tasks touching a specific file (bash/grep)
+grep -rl "ai_task.py" .ai-workflow/tasks/done/
+```
+
 ## Relationships
 
 Each task's `metadata.yaml` has these relationship fields:

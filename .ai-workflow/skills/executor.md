@@ -75,3 +75,21 @@ task-specific isolated branches and worktrees.
 If you cannot use a worktree (e.g., git is unavailable in your environment),
 edit directly in the main checkout and document this in `report.md` under
 "Assumptions", explaining why the worktree could not be used.
+
+---
+
+## Consulting done task history
+
+Before implementing, check whether prior completed work is directly relevant:
+
+1. Read `metadata.yaml` fields `related` and `parent` on the current task — if they reference done tasks, read those tasks' `report.md` for prior decisions and known risks.
+2. If no relationships are set but the task area overlaps with earlier work, use:
+   ```bash
+   python .ai-workflow/scripts/ai_task.py history --area <area>
+   python .ai-workflow/scripts/ai_task.py history --show <TASK-ID>
+   ```
+3. Read a full done task folder only when the task is a direct continuation (parent/child) or the `report.md` references a specific file you are about to change.
+
+**Do not load all done tasks by default.** Token cost and stale context outweigh the benefit for unrelated tasks.
+
+**Source of truth**: current source code and `task.md` take precedence over historical reports. A `report.md` describes what the executor intended; it may not reflect subsequent fixes or refactors.

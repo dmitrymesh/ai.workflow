@@ -1,6 +1,6 @@
 # AI Task Board
 
-Generated: 2026-05-03 00:39:36
+Generated: 2026-05-03 00:57:58
 
 ## Draft
 
@@ -35,6 +35,7 @@ _Empty_
 | AI-003 | Add git worktree execution workflow | medium | workflow, git, docs, cli | - | - | - |
 | AI-004 | Refactor ai_task CLI module | medium | workflow, cli, maintenance | - | - | - |
 | AI-005 | Add safe project installation workflow | medium | workflow, install, docs, cli | - | - | - |
+| AI-006 | Evaluate done tasks as project memory | low | workflow, docs, context | - | - | - |
 
 ## Rejected
 
