@@ -1,0 +1,62 @@
+profile: generic
+
+statuses:
+  - draft
+  - ready
+  - in_progress
+  - ready_for_review
+  - changes_requested
+  - ready_for_human
+  - done
+  - rejected
+
+transitions:
+  draft:
+    - ready
+    - rejected
+  ready:
+    - in_progress
+    - rejected
+  in_progress:
+    - ready_for_review
+    - rejected
+  ready_for_review:
+    - changes_requested
+    - ready_for_human
+    - rejected
+  changes_requested:
+    - in_progress
+    - rejected
+  ready_for_human:
+    - done
+    - changes_requested
+    - rejected
+  done: []
+  rejected: []
+
+agents:
+  manager:
+    default_tool: codex
+    skill: .ai-workflow/skills/manager.md
+  executor:
+    default_tool: claude
+    skill: .ai-workflow/skills/executor.md
+  reviewer:
+    default_tool: codex
+    skill: .ai-workflow/skills/reviewer.md
+
+forbidden_file_patterns:
+  generic:
+    - ".env"
+    - ".env.*"
+  unity:
+    - "*.unity"
+    - "*.prefab"
+    - "*.asset"
+    - "*.meta"
+    - "Packages/manifest.json"
+    - "Packages/packages-lock.json"
+    - "ProjectSettings/*"
+
+board:
+  generated_file: .ai-workflow/board.md

@@ -1,0 +1,12 @@
+id: "{{id}}"
+title: "{{title}}"
+status: "{{status}}"
+risk: "{{risk}}"
+area: {{area}}
+owner: null
+reviewer: null
+branch: null
+pr: null
+external_tracker: null
+created_at: "{{created_at}}"
+updated_at: "{{updated_at}}"
