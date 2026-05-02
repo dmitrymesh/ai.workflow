@@ -49,3 +49,36 @@ Review output must include:
 - Acceptance criteria check
 - Test quality
 - Required fixes
+
+---
+
+## Reviewing task worktree diffs
+
+The executor implements each task on a dedicated branch
+(`ai/<task-id>-<slug>`). Review the **task branch diff**, not unrelated changes
+in the main checkout.
+
+**How to get the task diff:**
+
+```bash
+# From inside the worktree, or from the main repo with the branch checked out:
+git diff main...ai/AI-003-add-git-worktree-execution-workflow
+
+# Or if the worktree path is known:
+git -C ../ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow diff main...HEAD
+```
+
+**What to verify in the diff:**
+
+1. Only files permitted by `task.md`'s scope are changed.
+2. No forbidden files appear in the diff.
+3. `report.md` and `validation.md` are updated inside the task folder.
+4. The task artifact changes (`report.md`, `validation.md`, status move) travel
+   together with the code changes from the task branch — they become part of the
+   same PR and are merged to `main` together during human acceptance.
+
+**Unrelated changes:**
+
+If the diff includes files that are not in the task scope but were present in
+the main checkout at prepare-worktree time, flag them as a blocking issue. The
+executor should not have committed unrelated files.

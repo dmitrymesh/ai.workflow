@@ -11,6 +11,9 @@ python .ai-workflow/scripts/ai_task.py create "Example task"
 # Human: review task.md and approve the contract by moving to ready
 python .ai-workflow/scripts/ai_task.py move AI-001 ready
 
+# Manager / human: prepare the executor's worktree after approval
+python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001
+
 # Generate the board
 python .ai-workflow/scripts/ai_task.py board
 ```
@@ -91,3 +94,134 @@ python .ai-workflow/scripts/ai_task.py unlink AI-002 parent
 ```
 
 `link` and `unlink` always update both sides (e.g., `blocks` ↔ `blocked_by`, `parent` ↔ `children`). `board` and `list` show the `Parent` and `Blocked By` columns so blocked tasks are visible at a glance.
+
+---
+
+## Git worktree execution workflow
+
+### Why worktrees?
+
+The default protocol uses the main checkout as the execution environment. This
+is simple but has two problems:
+
+1. **Parallel executors**: multiple agents editing the same working tree
+   overwrite each other's changes.
+2. **Single executor, dirty main checkout**: the human may have uncommitted
+   edits, task-management changes, or experiments in the main checkout. These
+   will appear in the executor's diff and pollute the review.
+
+Git worktrees solve both problems: each task gets an isolated checkout backed
+by its own branch. The main checkout stays clean as the control plane for task
+creation, approval, review, and human coordination.
+
+**Rule**: task implementation work happens in task worktrees by default. Direct
+edits in the main checkout are the exception and must be documented in
+`report.md`.
+
+### Visibility constraint
+
+> A new worktree only sees committed branch state by default.
+
+If the human moves a task to `ready` but does not commit that change, the
+executor in a separate worktree will not see the approved `task.md`.
+
+**Solution**: the `prepare-worktree` command explicitly copies the approved
+task folder from the main checkout into the worktree. No intermediate commit
+is required.
+
+### Naming conventions
+
+**Branch:**
+
+```
+ai/<task-id>-<slug>
+```
+
+- `<task-id>` is the stable unique prefix (e.g., `AI-003`)
+- `<slug>` is the human-readable suffix from the task folder name
+
+Examples:
+- `ai/AI-003-add-git-worktree-execution-workflow`
+- `ai/AI-007-fix-energy-overflow`
+
+**Worktree directory:**
+
+```
+../<repo-name>.worktrees/<task-id>-<slug>
+```
+
+The worktrees directory is a sibling to the main repo root.
+
+Examples (repo root: `~/projects/ai_workflow`):
+- `~/projects/ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow`
+- `~/projects/ai_workflow.worktrees/AI-007-fix-energy-overflow`
+
+### prepare-worktree command
+
+Run this after human approval moves a task to `ready`:
+
+```bash
+python .ai-workflow/scripts/ai_task.py prepare-worktree AI-003
+```
+
+What it does:
+1. Verifies the task is in `ready` status.
+2. Computes `branch_name = ai/<task-id>-<slug>` and `worktree_path`.
+3. Runs `git worktree add -b <branch> <path>` to create the isolated checkout.
+4. Copies the approved task folder (`task.md`, `metadata.yaml`, etc.) from the
+   main checkout into the worktree — so the executor can read the contract
+   without a prior commit.
+5. Records the branch in `metadata.yaml.branch` and regenerates `board.md`.
+6. Prints the worktree path and branch for handoff.
+
+**Print commands only (no git execution):**
+
+```bash
+python .ai-workflow/scripts/ai_task.py prepare-worktree AI-003 --print-only
+```
+
+Use this when git is unavailable in the current environment, or to review the
+commands before running them.
+
+### Executor workflow (inside the worktree)
+
+1. Confirm `metadata.yaml.branch` — the branch name should be present.
+2. Verify current branch: `git branch --show-current`. It must match
+   `metadata.yaml.branch`. Stop if it does not.
+3. Implement the task per `task.md`.
+4. Write `report.md` and `validation.md` in the task folder inside the
+   worktree.
+5. Move the task to `ready_for_review`.
+6. All commits go on the task branch; do not push to `main`.
+
+### Reviewer workflow
+
+Review the task branch diff, not unrelated local changes in the main checkout:
+
+```bash
+# From the main repo:
+git diff main...ai/AI-003-add-git-worktree-execution-workflow
+
+# From inside the worktree:
+git diff main...HEAD
+```
+
+Check:
+- Only in-scope files appear in the diff.
+- `report.md` and `validation.md` are updated.
+- No forbidden files were changed.
+
+The task artifact changes (`report.md`, `validation.md`, folder status) travel
+with the code changes in the same branch/PR and are merged to `main` together
+during human acceptance.
+
+### Cleanup
+
+After a task is accepted and merged:
+
+```bash
+git worktree remove ../ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow
+git branch -d ai/AI-003-add-git-worktree-execution-workflow
+```
+
+For rejected tasks, use `git branch -D` (force delete) if the branch was never merged.
