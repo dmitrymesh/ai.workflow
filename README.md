@@ -54,28 +54,84 @@ The task status is determined by its directory. `metadata.yaml` also stores the 
 
 ## Installation into a project
 
-Copy these files into the root of your target repository:
+> **Do not blindly copy files into an existing project.** Projects often already
+> have their own `AGENTS.md`, `CLAUDE.md`, `README.md`, or `.claude/` automation.
+> Overwriting these silently destroys project-specific context.
 
-```text
-.ai-workflow/
-AGENTS.md
-CLAUDE.md
-.claude/commands/
-```
+Use the safe install workflow instead:
 
-Then run:
+### 1. Preview the install plan
 
 ```bash
-python .ai-workflow/scripts/ai_task.py init --profile unity
+# From the protocol repo, preview what would happen:
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
+```
+
+The plan classifies every file as:
+
+| Marker | Action | Meaning |
+|--------|--------|---------|
+| `[+]` | `CREATE` | File does not exist in target — safe to create |
+| `[~]` | `UPDATE` | Protocol-owned file differs — will overwrite with `--apply` |
+| `[!]` | `MERGE-REQUIRED` | File exists and is an integration point — never auto-overwritten |
+| `[ ]` | `UNCHANGED` | File already matches source — nothing to do |
+| `[-]` | `SKIP` | Project-owned file (`README.md`) — always skipped |
+
+### 2. Apply protocol-owned files
+
+```bash
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
+```
+
+`--apply` creates or updates only **protocol-owned** files (`.ai-workflow/`,
+new `.claude/commands/` files). It never touches `AGENTS.md`, `CLAUDE.md`,
+`README.md`, or existing `.claude/commands/*` files.
+
+### 3. Merge integration points manually
+
+For files flagged `MERGE-REQUIRED`, the install plan prints a merge snippet.
+Review the snippet and append the relevant section to your existing file:
+
+- **`AGENTS.md`** — append a section pointing agents to `.ai-workflow/README.md`
+  and the role skills
+- **`CLAUDE.md`** — append executor rules pointing to `.ai-workflow/skills/executor.md`
+- **`.claude/commands/*`** — compare with the protocol version and keep the version
+  that matches your workflow
+
+### 4. Initialise and verify
+
+```bash
+python .ai-workflow/scripts/ai_task.py init --profile unity   # or generic
 python .ai-workflow/scripts/ai_task.py validate
 python .ai-workflow/scripts/ai_task.py board
 ```
 
-For non-Unity projects:
+### Upgrade path
+
+If `.ai-workflow/` is already installed:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py init --profile generic
+# See what changed in protocol-owned files:
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
+
+# Apply protocol updates (existing tasks/ are never touched):
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
 ```
+
+`tasks/` and `board.md` are **always excluded** from install/upgrade — existing
+task data is never deleted or overwritten.
+
+### Ownership model
+
+| Path | Owner | Install behaviour |
+|------|-------|-------------------|
+| `.ai-workflow/` (excl. `tasks/`, `board.md`) | Protocol | CREATE / UPDATE with `--apply` |
+| `.ai-workflow/tasks/` | Project | Never touched |
+| `.ai-workflow/board.md` | Generated | Never touched |
+| `AGENTS.md` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
+| `CLAUDE.md` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
+| `.claude/commands/*` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
+| `README.md` | Project | Always SKIP |
 
 ## Basic commands
 

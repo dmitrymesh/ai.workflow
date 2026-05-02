@@ -15,6 +15,8 @@ Usage:
   python .ai-workflow/scripts/ai_task.py unlink AI-002 parent
   python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001
   python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001 --print-only
+  python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
+  python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
 
 Module layout (all under .ai-workflow/scripts/):
   _core.py          constants, path utils, YAML, config, task discovery, relationship utils
@@ -23,6 +25,7 @@ Module layout (all under .ai-workflow/scripts/):
   _tasks.py         create_task, move_task, print_task_path
   _relationships.py link_tasks, unlink_tasks, show_task
   _worktree.py      prepare_worktree
+  _install.py       install_plan
   ai_task.py        init, build_parser, main  (this file — CLI entrypoint only)
 """
 
@@ -32,6 +35,7 @@ import argparse
 
 from _board import generate_board, list_tasks
 from _core import RELATIONSHIP_KINDS, STATUSES, ensure_structure, load_config, update_config_profile
+from _install import install_plan
 from _relationships import link_tasks, show_task, unlink_tasks
 from _tasks import create_task, move_task, print_task_path
 from _validate import validate
@@ -117,6 +121,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the git commands instead of running them",
     )
     p_prepare.set_defaults(func=prepare_worktree)
+
+    p_install = sub.add_parser(
+        "install-plan",
+        help=(
+            "Show a safe installation/upgrade plan for copying the protocol into a target project. "
+            "Use --apply to create/update protocol-owned files. "
+            "Integration points (AGENTS.md, CLAUDE.md, .claude/commands/*) are never auto-overwritten."
+        ),
+    )
+    p_install.add_argument("target", help="Path to the target project directory")
+    p_install.add_argument(
+        "--apply",
+        action="store_true",
+        help="Create/update protocol-owned files in the target (never overwrites integration points)",
+    )
+    p_install.set_defaults(func=install_plan)
 
     return parser
 

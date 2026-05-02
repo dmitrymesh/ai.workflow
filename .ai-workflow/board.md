@@ -1,6 +1,6 @@
 # AI Task Board
 
-Generated: 2026-05-03 00:16:15
+Generated: 2026-05-03 00:39:36
 
 ## Draft
 
@@ -34,6 +34,7 @@ _Empty_
 | AI-002 | Require human approval before ready | low | workflow, docs, skills | - | - | - |
 | AI-003 | Add git worktree execution workflow | medium | workflow, git, docs, cli | - | - | - |
 | AI-004 | Refactor ai_task CLI module | medium | workflow, cli, maintenance | - | - | - |
+| AI-005 | Add safe project installation workflow | medium | workflow, install, docs, cli | - | - | - |
 
 ## Rejected
 
