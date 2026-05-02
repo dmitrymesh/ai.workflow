@@ -8,5 +8,10 @@ reviewer: null
 branch: null
 pr: null
 external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related: []
 created_at: "{{created_at}}"
 updated_at: "{{updated_at}}"

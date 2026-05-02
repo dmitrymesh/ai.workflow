@@ -16,6 +16,7 @@ Your job:
 - Check test quality.
 - Check hidden behavior changes.
 - Check unnecessary complexity.
+- Check task relationships in `metadata.yaml` are consistent: referenced ids exist, parent/children and blocks/blocked_by are reciprocal, no self-references. `validate` should pass without relationship errors.
 
 Return exactly one decision:
 

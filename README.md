@@ -116,6 +116,53 @@ Show task path:
 python .ai-workflow/scripts/ai_task.py path AI-001
 ```
 
+Show task details (including relationships):
+
+```bash
+python .ai-workflow/scripts/ai_task.py show AI-001
+```
+
+Add or remove a relationship:
+
+```bash
+python .ai-workflow/scripts/ai_task.py link   AI-002 parent     AI-001
+python .ai-workflow/scripts/ai_task.py link   AI-003 blocked-by AI-001
+python .ai-workflow/scripts/ai_task.py unlink AI-003 blocked-by AI-001
+python .ai-workflow/scripts/ai_task.py unlink AI-002 parent
+```
+
+## Task relationships
+
+Each task records relationships in `metadata.yaml`:
+
+```text
+parent       single task id or null
+children     list of subtasks
+blocks       list of tasks this one blocks
+blocked_by   list of tasks that block this one
+related      non-blocking context links
+```
+
+Use `link` / `unlink` instead of editing YAML by hand — the CLI keeps both sides of every link in sync (`parent` ↔ `children`, `blocks` ↔ `blocked_by`, `related` ↔ `related`).
+
+Parent/child example — split a broad request into a parent and two children:
+
+```bash
+python .ai-workflow/scripts/ai_task.py create "Add reward preview"            # AI-010
+python .ai-workflow/scripts/ai_task.py create "Reward preview: service"       # AI-011
+python .ai-workflow/scripts/ai_task.py create "Reward preview: UI binding"    # AI-012
+python .ai-workflow/scripts/ai_task.py link AI-011 parent AI-010
+python .ai-workflow/scripts/ai_task.py link AI-012 parent AI-010
+```
+
+Blocking example — UI binding cannot start until the service ships:
+
+```bash
+python .ai-workflow/scripts/ai_task.py link AI-012 blocked-by AI-011
+```
+
+`validate` will fail with a clear message if a relationship references a missing task id or if `parent`/`children` or `blocks`/`blocked_by` are not reciprocal. `board` and `list` show `Parent` and `Blocked By` columns so blocked tasks are easy to spot.
+
 ## Status lifecycle
 
 Default allowed transitions:
@@ -289,7 +336,7 @@ Generated board. Do not edit manually.
 
 ### `.ai-workflow/tasks/<status>/<task>/metadata.yaml`
 
-Machine-readable task metadata.
+Machine-readable task metadata, including relationship fields (`parent`, `children`, `blocks`, `blocked_by`, `related`).
 
 ### `.ai-workflow/tasks/<status>/<task>/task.md`
 

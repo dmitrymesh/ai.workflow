@@ -46,6 +46,9 @@ DEFAULT_TRANSITIONS = {
     "rejected": [],
 }
 
+RELATIONSHIP_LIST_FIELDS = ["children", "blocks", "blocked_by", "related"]
+RELATIONSHIP_KINDS = ["parent", "child", "blocks", "blocked-by", "related"]
+
 
 def repo_root() -> Path:
     current = Path.cwd()
@@ -186,6 +189,27 @@ def dump_simple_yaml(data: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def normalize_meta(meta: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure relationship fields have the expected types after a round-trip."""
+    for key in RELATIONSHIP_LIST_FIELDS:
+        value = meta.get(key)
+        if not isinstance(value, list):
+            meta[key] = []
+    parent = meta.get("parent")
+    if not parent or parent in ("null", "None"):
+        meta["parent"] = None
+    return meta
+
+
+def load_meta(task_dir: Path) -> Dict[str, Any]:
+    return normalize_meta(parse_simple_yaml(task_dir / "metadata.yaml"))
+
+
+def save_meta(task_dir: Path, meta: Dict[str, Any]) -> None:
+    meta["updated_at"] = today()
+    write_text(task_dir / "metadata.yaml", dump_simple_yaml(meta))
+
+
 def load_config() -> Dict[str, Any]:
     config_path = workflow_root() / "config.yaml"
     config = parse_simple_yaml(config_path)
@@ -246,6 +270,183 @@ def find_task(task_id: str) -> Tuple[Path, Dict[str, Any]]:
         paths = "\n".join(str(p) for p, _ in matches)
         raise SystemExit(f"Task ID is ambiguous: {task_id}\n{paths}")
     return matches[0]
+
+
+def find_task_optional(task_id: str) -> Optional[Tuple[Path, Dict[str, Any]]]:
+    try:
+        return find_task(task_id)
+    except SystemExit:
+        return None
+
+
+def normalize_kind(kind: str) -> str:
+    return kind.replace("_", "-").strip().lower()
+
+
+def add_unique(items: List[str], value: str) -> bool:
+    if value in items:
+        return False
+    items.append(value)
+    return True
+
+
+def remove_if_present(items: List[str], value: str) -> bool:
+    if value in items:
+        items.remove(value)
+        return True
+    return False
+
+
+def detach_existing_parent(child_id: str, child_meta: Dict[str, Any]) -> None:
+    """If child already has a parent, remove the reciprocal entry on that parent."""
+    old_parent_id = child_meta.get("parent")
+    if not old_parent_id:
+        return
+    found = find_task_optional(old_parent_id)
+    if not found:
+        return
+    old_dir, old_meta = found
+    normalize_meta(old_meta)
+    if remove_if_present(old_meta["children"], child_id):
+        save_meta(old_dir, old_meta)
+
+
+def link_tasks(args: argparse.Namespace) -> None:
+    kind = normalize_kind(args.kind)
+    if kind not in RELATIONSHIP_KINDS:
+        raise SystemExit(
+            f"Unknown kind: {args.kind}. Allowed: {', '.join(RELATIONSHIP_KINDS)}"
+        )
+
+    task_dir, meta = find_task(args.task_id)
+    other_dir, other_meta = find_task(args.other_id)
+    normalize_meta(meta)
+    normalize_meta(other_meta)
+
+    task_id = str(meta.get("id"))
+    other_id = str(other_meta.get("id"))
+
+    if task_id == other_id:
+        raise SystemExit("Cannot link a task to itself.")
+
+    if kind == "parent":
+        # task.parent = other; other.children += task
+        if meta.get("parent") == other_id:
+            print(f"{task_id} already has parent {other_id}.")
+            return
+        detach_existing_parent(task_id, meta)
+        meta["parent"] = other_id
+        add_unique(other_meta["children"], task_id)
+    elif kind == "child":
+        # task.children += other; other.parent = task
+        if other_meta.get("parent") == task_id:
+            print(f"{other_id} already has parent {task_id}.")
+            return
+        detach_existing_parent(other_id, other_meta)
+        other_meta["parent"] = task_id
+        add_unique(meta["children"], other_id)
+    elif kind == "blocks":
+        add_unique(meta["blocks"], other_id)
+        add_unique(other_meta["blocked_by"], task_id)
+    elif kind == "blocked-by":
+        add_unique(meta["blocked_by"], other_id)
+        add_unique(other_meta["blocks"], task_id)
+    elif kind == "related":
+        add_unique(meta["related"], other_id)
+        add_unique(other_meta["related"], task_id)
+
+    save_meta(task_dir, meta)
+    save_meta(other_dir, other_meta)
+    generate_board(print_result=False)
+    print(f"Linked {task_id} {kind} {other_id}")
+
+
+def unlink_tasks(args: argparse.Namespace) -> None:
+    kind = normalize_kind(args.kind)
+    if kind not in RELATIONSHIP_KINDS:
+        raise SystemExit(
+            f"Unknown kind: {args.kind}. Allowed: {', '.join(RELATIONSHIP_KINDS)}"
+        )
+
+    task_dir, meta = find_task(args.task_id)
+    normalize_meta(meta)
+    task_id = str(meta.get("id"))
+
+    if kind == "parent":
+        if not meta.get("parent"):
+            print(f"{task_id} has no parent.")
+            return
+        old_parent_id = meta["parent"]
+        meta["parent"] = None
+        save_meta(task_dir, meta)
+        found = find_task_optional(old_parent_id)
+        if found:
+            old_dir, old_meta = found
+            normalize_meta(old_meta)
+            if remove_if_present(old_meta["children"], task_id):
+                save_meta(old_dir, old_meta)
+        generate_board(print_result=False)
+        print(f"Unlinked {task_id} parent (was {old_parent_id})")
+        return
+
+    if not args.other_id:
+        raise SystemExit(f"unlink {kind} requires <other_id>")
+
+    found = find_task_optional(args.other_id)
+    other_dir = other_meta = None
+    if found:
+        other_dir, other_meta = found
+        normalize_meta(other_meta)
+    other_id = str(other_meta.get("id")) if other_meta else args.other_id
+
+    if kind == "child":
+        remove_if_present(meta["children"], other_id)
+        if other_meta and other_meta.get("parent") == task_id:
+            other_meta["parent"] = None
+    elif kind == "blocks":
+        remove_if_present(meta["blocks"], other_id)
+        if other_meta:
+            remove_if_present(other_meta["blocked_by"], task_id)
+    elif kind == "blocked-by":
+        remove_if_present(meta["blocked_by"], other_id)
+        if other_meta:
+            remove_if_present(other_meta["blocks"], task_id)
+    elif kind == "related":
+        remove_if_present(meta["related"], other_id)
+        if other_meta:
+            remove_if_present(other_meta["related"], task_id)
+
+    save_meta(task_dir, meta)
+    if other_dir is not None and other_meta is not None:
+        save_meta(other_dir, other_meta)
+    generate_board(print_result=False)
+    print(f"Unlinked {task_id} {kind} {other_id}")
+
+
+def show_task(args: argparse.Namespace) -> None:
+    task_dir, meta = find_task(args.task_id)
+    normalize_meta(meta)
+
+    def fmt_list(values: List[str]) -> str:
+        return ", ".join(values) if values else "-"
+
+    area = meta.get("area")
+    if isinstance(area, list):
+        area_str = ", ".join(area) if area else "-"
+    else:
+        area_str = str(area) if area else "-"
+
+    print(f"{meta.get('id', '?')}: {meta.get('title', task_dir.name)}")
+    print(f"  status:     {task_dir.parent.name}")
+    print(f"  risk:       {meta.get('risk', '-')}")
+    print(f"  area:       {area_str}")
+    print(f"  branch:     {meta.get('branch') or '-'}")
+    print(f"  parent:     {meta.get('parent') or '-'}")
+    print(f"  children:   {fmt_list(meta['children'])}")
+    print(f"  blocks:     {fmt_list(meta['blocks'])}")
+    print(f"  blocked_by: {fmt_list(meta['blocked_by'])}")
+    print(f"  related:    {fmt_list(meta['related'])}")
+    print(f"  path:       {task_dir}")
 
 
 def create_task(args: argparse.Namespace) -> None:
@@ -333,8 +534,13 @@ def list_tasks(args: argparse.Namespace) -> None:
         for task_dir in sorted(status_dir.iterdir()) if status_dir.exists() else []:
             if not task_dir.is_dir():
                 continue
-            meta = parse_simple_yaml(task_dir / "metadata.yaml")
-            print(f"{meta.get('id', '?')} | {meta.get('title', task_dir.name)} | risk={meta.get('risk', '-')}")
+            meta = normalize_meta(parse_simple_yaml(task_dir / "metadata.yaml"))
+            parent = meta.get("parent") or "-"
+            blocked_by = ", ".join(meta.get("blocked_by", [])) or "-"
+            print(
+                f"{meta.get('id', '?')} | {meta.get('title', task_dir.name)} | "
+                f"risk={meta.get('risk', '-')} | parent={parent} | blocked_by={blocked_by}"
+            )
             found = True
         if not found:
             print("(empty)")
@@ -356,18 +562,21 @@ def generate_board(print_result: bool = True) -> None:
         for task_dir in sorted(status_dir.iterdir()) if status_dir.exists() else []:
             if not task_dir.is_dir():
                 continue
-            meta = parse_simple_yaml(task_dir / "metadata.yaml")
+            meta = normalize_meta(parse_simple_yaml(task_dir / "metadata.yaml"))
+            blocked_by = ", ".join(meta.get("blocked_by", [])) or "-"
             rows.append([
                 str(meta.get("id", "?")),
                 str(meta.get("title", task_dir.name)),
                 str(meta.get("risk", "-")),
                 ", ".join(meta.get("area", [])) if isinstance(meta.get("area"), list) else str(meta.get("area", "-")),
                 str(meta.get("branch", "-") or "-"),
+                str(meta.get("parent") or "-"),
+                blocked_by,
             ])
 
         if rows:
-            lines.append("| ID | Title | Risk | Area | Branch |")
-            lines.append("|---|---|---|---|---|")
+            lines.append("| ID | Title | Risk | Area | Branch | Parent | Blocked By |")
+            lines.append("|---|---|---|---|---|---|---|")
             for row in rows:
                 escaped = [cell.replace("|", "\\|") for cell in row]
                 lines.append("| " + " | ".join(escaped) + " |")
@@ -384,7 +593,8 @@ def generate_board(print_result: bool = True) -> None:
 def validate(args: Optional[argparse.Namespace] = None) -> None:
     ensure_structure()
     errors = []
-    ids = {}
+    ids: Dict[str, Path] = {}
+    metas: Dict[str, Dict[str, Any]] = {}
 
     for task_dir in all_task_dirs():
         status_dir = task_dir.parent.name
@@ -394,6 +604,7 @@ def validate(args: Optional[argparse.Namespace] = None) -> None:
             continue
 
         meta = parse_simple_yaml(meta_path)
+        normalize_meta(meta)
         task_id = meta.get("id")
         if not task_id:
             errors.append(f"Missing id in metadata.yaml: {task_dir}")
@@ -401,6 +612,7 @@ def validate(args: Optional[argparse.Namespace] = None) -> None:
             if task_id in ids:
                 errors.append(f"Duplicate task id {task_id}: {ids[task_id]} and {task_dir}")
             ids[task_id] = task_dir
+            metas[task_id] = meta
 
         meta_status = meta.get("status")
         if meta_status != status_dir:
@@ -409,6 +621,61 @@ def validate(args: Optional[argparse.Namespace] = None) -> None:
         for required in ["task.md", "report.md", "review.md", "decision.yaml", "validation.md"]:
             if not (task_dir / required).exists():
                 errors.append(f"Missing {required}: {task_dir}")
+
+    all_ids = set(ids.keys())
+    for task_id, meta in metas.items():
+        parent = meta.get("parent")
+        if parent and parent not in all_ids:
+            errors.append(
+                f"Relationship error in {task_id}: parent references missing task '{parent}'"
+            )
+        if parent == task_id:
+            errors.append(f"Relationship error in {task_id}: parent references itself")
+
+        for kind in RELATIONSHIP_LIST_FIELDS:
+            for ref in meta.get(kind, []):
+                if ref == task_id:
+                    errors.append(
+                        f"Relationship error in {task_id}: {kind} contains itself"
+                    )
+                    continue
+                if ref not in all_ids:
+                    errors.append(
+                        f"Relationship error in {task_id}: {kind} references missing task '{ref}'"
+                    )
+
+        if parent and parent in all_ids:
+            parent_children = metas[parent].get("children", [])
+            if task_id not in parent_children:
+                errors.append(
+                    f"Reciprocity error: {task_id}.parent={parent} but {parent}.children "
+                    f"does not contain {task_id}"
+                )
+
+        for child in meta.get("children", []):
+            if child in all_ids:
+                child_parent = metas[child].get("parent")
+                if child_parent != task_id:
+                    errors.append(
+                        f"Reciprocity error: {task_id}.children contains {child} but "
+                        f"{child}.parent={child_parent or 'null'}"
+                    )
+
+        for blocked in meta.get("blocks", []):
+            if blocked in all_ids:
+                if task_id not in metas[blocked].get("blocked_by", []):
+                    errors.append(
+                        f"Reciprocity error: {task_id}.blocks contains {blocked} but "
+                        f"{blocked}.blocked_by does not contain {task_id}"
+                    )
+
+        for blocker in meta.get("blocked_by", []):
+            if blocker in all_ids:
+                if task_id not in metas[blocker].get("blocks", []):
+                    errors.append(
+                        f"Reciprocity error: {task_id}.blocked_by contains {blocker} but "
+                        f"{blocker}.blocks does not contain {task_id}"
+                    )
 
     if errors:
         print("Validation failed:")
@@ -464,6 +731,28 @@ def build_parser() -> argparse.ArgumentParser:
     p_path = sub.add_parser("path", help="Print task folder path")
     p_path.add_argument("task_id")
     p_path.set_defaults(func=print_task_path)
+
+    p_link = sub.add_parser(
+        "link",
+        help="Add a relationship between two tasks (kind: parent|child|blocks|blocked-by|related)",
+    )
+    p_link.add_argument("task_id")
+    p_link.add_argument("kind", choices=RELATIONSHIP_KINDS)
+    p_link.add_argument("other_id")
+    p_link.set_defaults(func=link_tasks)
+
+    p_unlink = sub.add_parser(
+        "unlink",
+        help="Remove a relationship (omit other_id only when kind=parent)",
+    )
+    p_unlink.add_argument("task_id")
+    p_unlink.add_argument("kind", choices=RELATIONSHIP_KINDS)
+    p_unlink.add_argument("other_id", nargs="?")
+    p_unlink.set_defaults(func=unlink_tasks)
+
+    p_show = sub.add_parser("show", help="Show task details including relationships")
+    p_show.add_argument("task_id")
+    p_show.set_defaults(func=show_task)
 
     return parser
 

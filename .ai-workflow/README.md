@@ -53,3 +53,36 @@ Run:
 ```bash
 python .ai-workflow/scripts/ai_task.py validate
 ```
+
+`validate` checks folder/metadata status consistency, that all task files are present, that every task id is unique, and that relationship references are valid and reciprocal.
+
+## Relationships
+
+Each task's `metadata.yaml` has these relationship fields:
+
+- `parent`: single task id or null — the task this one is a subtask of
+- `children`: list of subtasks
+- `blocks`: tasks this one blocks
+- `blocked_by`: tasks that must complete before this one can start
+- `related`: non-blocking context links
+
+Manage relationships via the CLI; do not hand-edit YAML for these:
+
+```bash
+# parent / child
+python .ai-workflow/scripts/ai_task.py link AI-002 parent AI-001
+python .ai-workflow/scripts/ai_task.py link AI-001 child  AI-003
+
+# blocking
+python .ai-workflow/scripts/ai_task.py link AI-004 blocked-by AI-001
+
+# loose context link
+python .ai-workflow/scripts/ai_task.py link AI-005 related AI-002
+
+# inspect / remove
+python .ai-workflow/scripts/ai_task.py show   AI-001
+python .ai-workflow/scripts/ai_task.py unlink AI-004 blocked-by AI-001
+python .ai-workflow/scripts/ai_task.py unlink AI-002 parent
+```
+
+`link` and `unlink` always update both sides (e.g., `blocks` ↔ `blocked_by`, `parent` ↔ `children`). `board` and `list` show the `Parent` and `Blocked By` columns so blocked tasks are visible at a glance.
