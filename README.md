@@ -193,9 +193,10 @@ ready_for_review → changes_requested
 ready_for_review → ready_for_human
 ```
 
-Only a human validator should move:
+Only a human should move:
 
 ```text
+draft → ready
 ready_for_human → done
 ```
 
@@ -226,7 +227,19 @@ Acceptance criteria
 Validation
 ```
 
-### 2. Executor implements
+The manager leaves the task in `draft` and reports that human approval is needed. The manager does not move the task to `ready`.
+
+### 2. Human approves task contract
+
+A human reviews `task.md` and, if the scope, requirements, acceptance criteria, and validation plan are acceptable, moves the task to `ready`:
+
+```bash
+python .ai-workflow/scripts/ai_task.py move AI-001 ready
+```
+
+Only a human should perform this step.
+
+### 3. Executor implements
 
 Claude Code or another executor agent reads:
 
@@ -248,7 +261,7 @@ After implementation it moves the task to:
 ready_for_review
 ```
 
-### 3. Reviewer checks result
+### 4. Reviewer checks result
 
 Codex or another reviewer agent reads:
 
@@ -286,7 +299,7 @@ If changes are needed, task moves to:
 changes_requested
 ```
 
-### 4. Human validates
+### 5. Human validates
 
 A human runs the final checks.
 
@@ -378,7 +391,8 @@ Use the Unity profile.
 Keep the task small.
 Do not implement code.
 Fill task.md and metadata.yaml.
-Move the task to ready only if acceptance criteria are clear.
+Leave the task in draft.
+Do not move the task to ready — report that human approval is needed before execution.
 ```
 
 ## Example Claude executor prompt

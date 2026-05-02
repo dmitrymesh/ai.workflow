@@ -14,6 +14,7 @@ Before managing, executing, or reviewing AI tasks:
 
 General rules:
 
+- Do not move tasks from `draft` to `ready`. Only a human may approve the task contract and move it to `ready`.
 - Do not mark tasks as `done` unless explicitly acting as a human validator.
 - Do not expand task scope.
 - Do not silently ignore acceptance criteria.

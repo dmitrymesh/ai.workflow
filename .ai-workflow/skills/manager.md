@@ -25,7 +25,7 @@ Rules:
 
 - If a task is too broad, split it.
 - If acceptance criteria are vague, keep task in `draft`.
-- Move task to `ready` only when it is implementable.
+- Do not move tasks to `ready`. Leave completed task contracts in `draft` and explicitly report that human approval is needed before execution.
 - Avoid tasks that require broad scene/prefab changes unless explicitly intended.
 
 Recommended risk levels:

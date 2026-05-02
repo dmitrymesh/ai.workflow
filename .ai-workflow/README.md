@@ -5,8 +5,13 @@ This folder contains the local AI task protocol for this repository.
 ## Quick start
 
 ```bash
+# Manager: create the task contract (leaves it in draft)
 python .ai-workflow/scripts/ai_task.py create "Example task"
+
+# Human: review task.md and approve the contract by moving to ready
 python .ai-workflow/scripts/ai_task.py move AI-001 ready
+
+# Generate the board
 python .ai-workflow/scripts/ai_task.py board
 ```
 
