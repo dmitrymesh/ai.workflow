@@ -7,7 +7,7 @@
 - `python .ai-workflow/scripts/ai_task.py list`: passed — tasks grouped by metadata.status
 - `python .ai-workflow/scripts/ai_task.py board`: passed — board.md regenerated
 
-## Smoke tests
+## Smoke tests (original round)
 
 All lifecycle paths tested manually in the worktree:
 
@@ -24,6 +24,17 @@ All lifecycle paths tested manually in the worktree:
 | Reject | `move AI-010 rejected` | changes_requested → rejected |
 | Cleanup | task folder removed | validate still passes |
 
+## Smoke tests (fix round)
+
+| Test | Command | Result |
+|------|---------|--------|
+| history after migration | `history` | 7 done tasks listed from flat layout |
+| history --show | `history --show AI-001` | report.md printed with encoding fallback |
+| blocked claim rejection | `claim AI-011` (AI-011 blocked-by AI-010) | `Task AI-011 is blocked by: AI-010. Resolve all blockers before claiming.` |
+| claim worktree success | `claim AI-010` | worktree created, metadata updated to in_progress |
+| atomic failure | branch exists, dir removed, `claim AI-010` | `Worktree creation failed. Task has NOT been claimed.` — metadata unchanged |
+| validate after cleanup | `validate` | passed |
+
 ## Forbidden file check
 
 - No Unity files (`*.unity`, `*.prefab`, `*.asset`, `*.meta`) changed: confirmed
@@ -32,8 +43,8 @@ All lifecycle paths tested manually in the worktree:
 
 ## Notes
 
-- `claim` with actual worktree creation was tested via `--print-only` only. The
-  actual git worktree add step works identically to the existing `prepare-worktree`
-  command which has been in production use since AI-003.
+- `claim` with actual worktree creation was fully exercised in the fix round.
+- The Windows cp1252 encoding error for `history --show` was a pre-existing issue
+  revealed by the fix (previously hidden because `tasks/done/` was empty).
 - No compile or unit test infrastructure exists for the Python workflow scripts.
-  Correctness was verified through the smoke test sequence above.
+  Correctness was verified through the smoke test sequences above.

@@ -100,6 +100,13 @@ def claim_task(args: argparse.Namespace) -> None:
             "Use that branch/worktree or clear the branch field to reclaim."
         )
 
+    blocked_by = meta.get("blocked_by", [])
+    if isinstance(blocked_by, list) and blocked_by:
+        raise SystemExit(
+            f"Task {args.task_id} is blocked by: {', '.join(blocked_by)}. "
+            "Resolve all blockers before claiming."
+        )
+
     task_id = str(meta.get("id"))
     branch_name, worktree_path = _branch_and_worktree_path(task_id, meta)
 
@@ -130,6 +137,12 @@ def claim_task(args: argparse.Namespace) -> None:
 
     ok = _create_worktree(branch_name, worktree_path)
 
+    if not ok:
+        raise SystemExit(
+            "Worktree creation failed. Task has NOT been claimed. "
+            "Resolve the error above and retry."
+        )
+
     meta["branch"] = branch_name
     meta["status"] = "in_progress"
     meta["updated_at"] = today()
@@ -137,8 +150,7 @@ def claim_task(args: argparse.Namespace) -> None:
     generate_board(print_result=False)
     print(f"Updated metadata.yaml: branch = {branch_name}, status = in_progress")
 
-    if ok:
-        _sync_task_folder(task_dir, dest_task_dir)
+    _sync_task_folder(task_dir, dest_task_dir)
 
     print()
     print("Next steps:")

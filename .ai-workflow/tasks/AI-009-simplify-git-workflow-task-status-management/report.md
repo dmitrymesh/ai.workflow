@@ -9,9 +9,27 @@ Replaced the status-by-directory task layout with a stable flat layout where
 `ready_for_human` from the lifecycle. Updated all role skills and README to
 reflect the new workflow with no manual status mirroring between worktrees.
 
+**Fix round** (addressing review blocking issues):
+- Fixed `_history.py` to use `all_task_dirs()` + metadata status filter instead of
+  hardcoded `tasks/done/` path, so done tasks are discoverable after migration.
+  Also fixed Windows cp1252 encoding error when printing report.md content with
+  non-ASCII characters.
+- Made `claim_task()` atomic: metadata is not mutated if `_create_worktree()`
+  returns False (git failure). The task stays `ready` and unclaimed.
+- Added `blocked_by` check in `claim_task()`: claim fails with a clear error if
+  any unresolved blockers are present.
+
 ## Changed files
 
-### Scripts
+### Scripts (fix round)
+- `.ai-workflow/scripts/_history.py` — replaced `_done_task_dirs()` hardcoded
+  `tasks/done/` with `all_task_dirs()` + metadata status filter; added import
+  of `sys`; added encoding-safe print for `--show` output.
+- `.ai-workflow/scripts/_worktree.py` — added `blocked_by` pre-check in
+  `claim_task()`; moved metadata update to after `_create_worktree()` success
+  check; `_sync_task_folder()` now always called (no longer conditional on `ok`).
+
+### Scripts (original round)
 - `.ai-workflow/scripts/_core.py` — removed `ready_for_human` from `STATUSES`;
   added `_LEGACY_STATUS_DIRS` set; updated `DEFAULT_TRANSITIONS`; rewrote
   `ensure_structure()` (no longer creates status subdirs); rewrote
