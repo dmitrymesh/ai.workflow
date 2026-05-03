@@ -24,7 +24,18 @@ All lifecycle paths tested manually in the worktree:
 | Reject | `move AI-010 rejected` | changes_requested → rejected |
 | Cleanup | task folder removed | validate still passes |
 
-## Smoke tests (fix round)
+## Smoke tests (fix round 2)
+
+| Test | Command | Result |
+|------|---------|--------|
+| validate passes on good tasks | `validate` | passed |
+| folder/id mismatch detected | created `AI-999-wrong-name/metadata.yaml` with `id: AI-001` | `Folder/id mismatch: folder 'AI-999-wrong-name' does not start with id 'AI-001'` |
+| duplicate id also detected | same test | duplicate id error reported alongside mismatch |
+| board.md untracked | `git status --short .ai-workflow/board.md` after `git rm --cached` | `D  .ai-workflow/board.md` (staged deletion) |
+| board regeneration works | `python ai_task.py board` | file regenerated locally; not tracked |
+| validate after cleanup | `validate` | passed |
+
+## Smoke tests (fix round 1)
 
 | Test | Command | Result |
 |------|---------|--------|

@@ -38,6 +38,11 @@ def validate(args: Optional[argparse.Namespace] = None) -> None:
                 errors.append(f"Duplicate task id {task_id}: {ids[task_id]} and {task_dir}")
             ids[task_id] = task_dir
             metas[task_id] = meta
+            if not task_dir.name.startswith(task_id):
+                errors.append(
+                    f"Folder/id mismatch: folder '{task_dir.name}' does not start with "
+                    f"id '{task_id}' — rename the folder or correct metadata.yaml id"
+                )
 
         meta_status = meta.get("status")
         if meta_status not in STATUSES:

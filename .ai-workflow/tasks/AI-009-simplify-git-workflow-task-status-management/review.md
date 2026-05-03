@@ -6,18 +6,17 @@ changes_requested
 
 ## Blocking issues
 
-1. Existing done task history is no longer discoverable through `history`.
-   `.ai-workflow/scripts/_history.py:19` still hard-codes `tasks/done/`, but this branch migrates completed tasks to flat `tasks/<id>/` folders with `metadata.yaml.status: done`. In the reviewed worktree, `python .ai-workflow/scripts/ai_task.py list` shows AI-001..AI-007 under `done`, while `python .ai-workflow/scripts/ai_task.py history` prints `(no matching done tasks)` and `history --show AI-001` prints `No done task found: AI-001`. This violates the requirements and acceptance criteria that existing completed task history remains readable/discoverable.
+1. `validate` does not detect folder/id mismatches required by the task contract.
+   The task explicitly requires validation to "detect mismatch between folder path and `metadata.yaml.id`" (`task.md`, requirements section). In `.ai-workflow/scripts/_validate.py:31`, validation reads `metadata.yaml` and checks for duplicate IDs, but there is no check that a stable task folder name begins with or otherwise matches the metadata id. A folder like `tasks/AI-999-wrong-name/metadata.yaml` with `id: AI-001` would be accepted unless it collides with another id. This leaves a migration/status ambiguity the task specifically asked to catch.
 
-2. `claim` can leave the workflow in a claimed/in_progress state even when worktree creation fails.
-   `_create_worktree()` returns `False` on `git worktree add` failure (`.ai-workflow/scripts/_worktree.py:72`), but `claim_task()` still writes `branch` and `status: in_progress` immediately afterward (`.ai-workflow/scripts/_worktree.py:131`). If git is unavailable, the branch already exists, or worktree creation fails for any reason, the task becomes claimed without a prepared/synced worktree. The contract requires claim to create or prepare the task branch/worktree and fail clearly if unsafe to start.
-
-3. `claim` does not reject blocked tasks.
-   The claim path checks only `status == ready` and whether `branch` is already set (`.ai-workflow/scripts/_worktree.py:91`, `.ai-workflow/scripts/_worktree.py:97`). It never checks `blocked_by`, even though the requirement says claim must fail clearly if the task is blocked. A ready task with unresolved blockers can therefore be claimed and moved to `in_progress`.
+2. `board.md` remains tracked but `validate` does not detect stale generated board state.
+   The contract requires the implementation to define whether `.ai-workflow/board.md` remains tracked, becomes ignored, or is validated for freshness, and then specifically requires detecting stale/generated board state if it remains tracked. `.ai-workflow/board.md` is still tracked, and `.ai-workflow/scripts/_board.py:67` writes it as a generated file, but `.ai-workflow/scripts/_validate.py` has no freshness check. A user can merge stale board output while `validate` still passes, which is one of the sync problems this task is meant to remove.
 
 ## Non-blocking issues
 
-- The smoke test used `claim --print-only`, which mutates metadata to `in_progress`. That is consistent with the current implementation, but it means the validation did not exercise real worktree creation or sync for the new `claim` command.
+- Previous blocker resolved: `history` now lists flat `status: done` tasks and `history --show AI-001` prints the report.
+- Previous blocker resolved: `claim` now aborts without mutating metadata when worktree creation fails.
+- Previous blocker resolved: `claim` now rejects tasks with `blocked_by` entries.
 
 ## Scope check
 
@@ -25,11 +24,11 @@ In scope. The diff is limited to `.ai-workflow/` protocol files and task artifac
 
 ## Acceptance criteria check
 
-Not met. Stable metadata status, list/board grouping, and lifecycle commands are mostly present, but the blockers above fail the done-history discoverability and safe executor claim criteria.
+Not met. Stable metadata status, list/board grouping, lifecycle commands, history discoverability, and claim safety are mostly present, but the required validation safeguards for folder/id mismatch and tracked board freshness are missing.
 
 ## Test quality
 
-Validation commands reported as run, and I re-ran `validate` and `list` successfully in the task worktree. However, the submitted validation missed the broken `history` behavior and did not run actual `claim` worktree creation.
+Validation commands reported as run, and I re-ran `validate`, `list`, `history`, and `history --show AI-001` successfully in the task worktree. The submitted validation still does not cover the required folder/id mismatch or stale board detection behavior.
 
 ## Unity-specific risks
 
@@ -37,7 +36,6 @@ None found.
 
 ## Required fixes
 
-1. Update `history` to use `all_task_dirs()`/metadata status so flat `status: done` tasks are listed and `--show` works after migration. Keep legacy done-dir compatibility if needed.
-2. Make `claim` fail without changing metadata if worktree creation/preparation fails, or otherwise provide a durable recovery path that does not falsely mark the task as claimed.
-3. Make `claim` reject tasks with unresolved `blocked_by` references before branch/worktree creation or metadata mutation.
-4. Add focused smoke coverage for `history` after migration, blocked-task claim rejection, and failed worktree creation behavior.
+1. Add validation for stable task folder path vs `metadata.yaml.id` mismatches, with clear repair guidance.
+2. Either stop tracking `.ai-workflow/board.md` as a generated cache or make `validate` detect stale tracked board output. Document the chosen behavior consistently.
+3. Add focused validation/smoke coverage for both cases above.

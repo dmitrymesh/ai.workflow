@@ -9,7 +9,14 @@ Replaced the status-by-directory task layout with a stable flat layout where
 `ready_for_human` from the lifecycle. Updated all role skills and README to
 reflect the new workflow with no manual status mirroring between worktrees.
 
-**Fix round** (addressing review blocking issues):
+**Fix round 2** (addressing second review blocking issues):
+- Added folder/id mismatch check in `_validate.py`: reports an error when
+  a task folder name does not start with `metadata.yaml.id`, with repair guidance.
+- Added `.ai-workflow/board.md` to `.gitignore` and untracked it via
+  `git rm --cached`; board.md is now a local generated cache that is never
+  committed. Updated README ownership table and Board section accordingly.
+
+**Fix round 1** (addressing first review blocking issues):
 - Fixed `_history.py` to use `all_task_dirs()` + metadata status filter instead of
   hardcoded `tasks/done/` path, so done tasks are discoverable after migration.
   Also fixed Windows cp1252 encoding error when printing report.md content with
@@ -21,7 +28,16 @@ reflect the new workflow with no manual status mirroring between worktrees.
 
 ## Changed files
 
-### Scripts (fix round)
+### Scripts (fix round 2)
+- `.ai-workflow/scripts/_validate.py` — added folder/id mismatch check after
+  task_id extraction.
+- `.ai-workflow/README.md` — updated ownership table row for `board.md`; updated
+  Board section; updated `--apply` note.
+- `.gitignore` — added `.ai-workflow/board.md` entry.
+- `.ai-workflow/board.md` — untracked via `git rm --cached` (file stays on disk,
+  no longer committed).
+
+### Scripts (fix round 1)
 - `.ai-workflow/scripts/_history.py` — replaced `_done_task_dirs()` hardcoded
   `tasks/done/` with `all_task_dirs()` + metadata status filter; added import
   of `sys`; added encoding-safe print for `--show` output.
