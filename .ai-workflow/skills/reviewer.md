@@ -112,8 +112,8 @@ When `report.md` contains an `## Appeal` section, treat this submission as an ap
 3. Make exactly one follow-up decision:
    - **Accept the appeal**: if the executor's evidence shows the implementation is correct. Move the task to `ready_for_human`. Record your reasoning under `## Appeal response` in `review.md`.
    - **Maintain or revise `changes_requested`**: if the finding stands after considering the appeal. Give clearer rationale so the executor knows exactly what must change. Do not re-raise findings the executor did not dispute and that you did not flag as blocking.
-   - **Escalate to human**: if the dispute depends on product judgment, ambiguous acceptance criteria, or conflicting priorities a reviewer alone cannot resolve. State the specific question for the human under `## Appeal response` in `review.md`. Leave the task in `changes_requested`.
-4. Write the follow-up decision under `## Appeal response` in `review.md` and update `decision.yaml`.
+   - **Escalate to human**: if the dispute depends on product judgment, ambiguous acceptance criteria, or conflicting priorities a reviewer alone cannot resolve. Move the task to `ready_for_human`. Write `decision: escalated_to_human` in `decision.yaml`. State the specific question for the human under `## Appeal response` in `review.md`.
+4. Write the follow-up decision under `## Appeal response` in `review.md` and update `decision.yaml` with one of: `approve`, `changes_requested`, or `escalated_to_human`.
 
 **Limits:**
 - You may not issue `changes_requested` again on a finding you already accepted in an appeal response.

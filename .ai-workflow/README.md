@@ -269,11 +269,11 @@ One appeal per review dispute. After the reviewer's follow-up decision, the exec
 
 When `report.md` contains `## Appeal`, respond with exactly one follow-up decision recorded under `## Appeal response` in `review.md`:
 
-- **Accept** — implementation is correct; move to `ready_for_human`.
-- **Maintain `changes_requested`** — finding stands; provide clearer rationale.
-- **Escalate to human** — dispute requires product judgment; state the question in `review.md` and leave task in `changes_requested`.
+- **Accept** (`decision: approve`) — implementation is correct; move to `ready_for_human`.
+- **Maintain `changes_requested`** (`decision: changes_requested`) — finding stands; provide clearer rationale.
+- **Escalate to human** (`decision: escalated_to_human`) — dispute requires product judgment; move to `ready_for_human`, state the question for the human under `## Appeal response` in `review.md`.
 
-Update `decision.yaml` to reflect the follow-up decision.
+The `decision.yaml` value distinguishes escalation (`escalated_to_human`) from normal approval (`approve`), so the next actor is unambiguous to any reader of the task folder.
 
 ---
 

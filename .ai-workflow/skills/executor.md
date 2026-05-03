@@ -126,6 +126,6 @@ Do not use an appeal to avoid work, to relitigate style preferences, or when the
 
 - **Appeal accepted** (task moves to `ready_for_human`): no further action needed.
 - **`changes_requested` maintained or revised**: implement the remaining changes. You may not appeal the same finding a second time.
-- **Escalated to human**: wait for the human's decision before proceeding.
+- **Escalated to human** (task moves to `ready_for_human`, `decision.yaml` contains `escalated_to_human`): wait for the human's decision before proceeding. Do not make further changes until the human resolves the dispute.
 
 One appeal is permitted per review dispute. A new dispute on a fresh review round covering different findings may use the appeal mechanism once.

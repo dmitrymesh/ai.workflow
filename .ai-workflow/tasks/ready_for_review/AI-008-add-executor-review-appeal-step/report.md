@@ -4,10 +4,12 @@
 
 Added a documented, bounded review appeal step to the protocol. Design choice: artifact-based appeal using existing statuses — no new status introduced. The appeal reuses the `changes_requested → in_progress → ready_for_review` cycle; the presence of an `## Appeal` section in `report.md` signals to the reviewer that the submission is an appeal, not a normal fix.
 
+**Fix (review round 2):** Resolved the blocking issue — escalation to human now has a durable, machine-readable encoding. When escalating, the reviewer moves the task to `ready_for_human` (not `changes_requested`) and writes `decision: escalated_to_human` in `decision.yaml`. This distinguishes "human must decide" from "executor must fix" without adding a new status.
+
 Changes:
-- `executor.md` — added "Review appeal" section: when/how to file an appeal, what the `## Appeal` section must contain, what to do after the reviewer's follow-up decision, one-appeal-per-dispute limit.
-- `reviewer.md` — added "Evaluating an executor appeal" section: how to detect an appeal, three follow-up decision options (accept/maintain/escalate), `## Appeal response` heading convention, limits on re-raising accepted findings.
-- `.ai-workflow/README.md` — added "Review appeal" section documenting the mechanism for both executor and reviewer, including the no-new-status rationale.
+- `executor.md` — added "Review appeal" section: when/how to file an appeal, what the `## Appeal` section must contain, what to do after each follow-up decision (including the escalated path now clarifies task moves to `ready_for_human`).
+- `reviewer.md` — added "Evaluating an executor appeal" section: three follow-up decision options with explicit status transitions and `decision.yaml` values (`approve`, `changes_requested`, `escalated_to_human`).
+- `.ai-workflow/README.md` — added "Review appeal" section with decision convention table showing all three `decision.yaml` values and their status outcomes.
 
 ## Changed files
 
@@ -18,15 +20,14 @@ Changes:
 ## Validation performed
 
 - `python .ai-workflow/scripts/ai_task.py validate` — passed
-- `python .ai-workflow/scripts/ai_task.py board` — passed
 - `python .ai-workflow/scripts/ai_task.py list` — passed
-- Manual consistency check: executor.md, reviewer.md, and README.md all describe the same appeal rules, artifact conventions (`## Appeal`, `## Appeal response`), and one-appeal limit
+- Manual consistency check: executor.md, reviewer.md, and README.md all describe the same appeal rules, `decision.yaml` conventions (`approve`, `changes_requested`, `escalated_to_human`), and one-appeal limit — consistent
 - Forbidden file check: no `.env*`, no unrelated files changed
 
 ## Assumptions
 
-- Worktree created via `prepare-worktree AI-008` (branch was null at task pickup). Working on branch `ai/AI-008-add-executor-review-appeal-step`.
-- No new status was introduced. The task notes suggested preferring the artifact-based approach, and no strong reason emerged to add a new status — the `## Appeal` section in `report.md` provides a clear, durable signal without additional protocol surface.
+- Worktree carried over from round 1 (`prepare-worktree AI-008`, branch `ai/AI-008-add-executor-review-appeal-step`).
+- No new status was introduced. Human escalation uses the existing `ready_for_human` status with `decision: escalated_to_human` in `decision.yaml` as the distinguishing convention.
 
 ## Known risks
 
