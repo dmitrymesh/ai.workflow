@@ -98,3 +98,23 @@ When reviewing, check related done tasks to catch repeated issues or verify cons
 3. Read a full done task folder when reviewing a direct follow-up (parent/child relationship) or a protocol-level change.
 
 **Do not read all done tasks by default.** Only consult history when there is a concrete reason to believe prior decisions are relevant to the current review.
+
+---
+
+## Evaluating an executor appeal
+
+When `report.md` contains an `## Appeal` section, treat this submission as an appeal response rather than a normal implementation review.
+
+**Steps:**
+
+1. Identify the disputed finding(s) from the appeal section.
+2. Re-examine the referenced evidence: `task.md` requirements, acceptance criteria, code, and `validation.md`.
+3. Make exactly one follow-up decision:
+   - **Accept the appeal**: if the executor's evidence shows the implementation is correct. Move the task to `ready_for_human`. Record your reasoning under `## Appeal response` in `review.md`.
+   - **Maintain or revise `changes_requested`**: if the finding stands after considering the appeal. Give clearer rationale so the executor knows exactly what must change. Do not re-raise findings the executor did not dispute and that you did not flag as blocking.
+   - **Escalate to human**: if the dispute depends on product judgment, ambiguous acceptance criteria, or conflicting priorities a reviewer alone cannot resolve. State the specific question for the human under `## Appeal response` in `review.md`. Leave the task in `changes_requested`.
+4. Write the follow-up decision under `## Appeal response` in `review.md` and update `decision.yaml`.
+
+**Limits:**
+- You may not issue `changes_requested` again on a finding you already accepted in an appeal response.
+- After you have maintained your decision on a disputed finding, the executor may not appeal that same finding again.

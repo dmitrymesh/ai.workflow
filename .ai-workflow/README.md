@@ -244,6 +244,39 @@ python .ai-workflow/scripts/ai_task.py unlink AI-002 parent
 
 ---
 
+## Review appeal
+
+After a `changes_requested` review, an executor may either fix the requested changes (normal path) or file a single documented appeal if the implementation is believed to be correct.
+
+No new status is introduced. The appeal reuses the existing `changes_requested → in_progress → ready_for_review` cycle. The presence of an `## Appeal` section in `report.md` signals to the reviewer that this submission is an appeal, not a normal fix.
+
+### Executor
+
+An appeal is appropriate only when a reviewer finding contradicts explicit requirements or acceptance criteria in `task.md`, the reviewer missed evidence already in `report.md` or `validation.md`, or the requested change would demonstrably worsen the implementation.
+
+**To file an appeal:**
+
+1. Move: `changes_requested → in_progress`.
+2. Add `## Appeal` to `report.md` with:
+   - The specific finding(s) disputed (quote or reference by section).
+   - Counter-reasoning referencing code, requirements, acceptance criteria, or validation evidence.
+   - Whether any code changes were made before appealing, and what they were.
+3. Move: `in_progress → ready_for_review`.
+
+One appeal per review dispute. After the reviewer's follow-up decision, the executor must comply or wait for a human.
+
+### Reviewer
+
+When `report.md` contains `## Appeal`, respond with exactly one follow-up decision recorded under `## Appeal response` in `review.md`:
+
+- **Accept** — implementation is correct; move to `ready_for_human`.
+- **Maintain `changes_requested`** — finding stands; provide clearer rationale.
+- **Escalate to human** — dispute requires product judgment; state the question in `review.md` and leave task in `changes_requested`.
+
+Update `decision.yaml` to reflect the follow-up decision.
+
+---
+
 ## Git worktree execution workflow
 
 ### Why worktrees?
