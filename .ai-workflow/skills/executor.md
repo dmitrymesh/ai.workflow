@@ -13,16 +13,16 @@ Your job:
 - After implementation, write `report.md`.
 - Update `validation.md` honestly.
 
-You may move tasks:
+CLI commands you may run:
 
-- `ready` → `in_progress`
-- `in_progress` → `ready_for_review`
-- `changes_requested` → `in_progress`
+- `claim <TASK-ID>` — claim a `ready` task: creates a worktree, moves it to `in_progress`
+- `submit <TASK-ID>` — record implementation complete: moves `in_progress`/`changes_requested` → `ready_for_review`
+- `move <TASK-ID> rejected` — reject execution when the task is fundamentally unsafe to proceed
 
-You may not move tasks:
+You may not run:
 
-- to `ready_for_human`
-- to `done`
+- `review --approve` (reviewer role only)
+- `move <TASK-ID> done` (done is set by reviewer approval; completed in `main` by human merge)
 
 Report must include:
 
@@ -36,7 +36,7 @@ Validation honesty:
 
 - If tests were not run, write `not run`.
 - Do not write `passed` unless the command was actually executed.
-- If validation failed, keep task out of `ready_for_human`.
+- If validation failed, do not move to `ready_for_review`.
 
 ---
 
@@ -57,33 +57,34 @@ task-specific isolated branches and worktrees.
 
 **Your workflow inside the task worktree:**
 
-1. Confirm your worktree path and branch in `metadata.yaml.branch`. The manager
-   should have run `prepare-worktree` before handing the task to you; if
-   `branch` is null the manager step was skipped. Do not treat direct edits in
-   the main checkout as an equivalent option. Before editing, stop and either
-   ask for the worktree handoff or run
-   `python .ai-workflow/scripts/ai_task.py prepare-worktree <TASK-ID>`
-   yourself, then continue in the generated worktree.
-2. **Verify the current branch before editing.** Run
-   `git branch --show-current` and confirm it matches `metadata.yaml.branch`
-   (format: `ai/<task-id>-<slug>`). If the branch is wrong, stop and resolve
-   before touching any files.
+1. **Claim the task.** From the main checkout, run:
+   ```bash
+   python .ai-workflow/scripts/ai_task.py claim <TASK-ID>
+   ```
+   This verifies the task is `ready`, creates the task branch and worktree,
+   copies the approved task folder into the worktree, and moves the task to
+   `in_progress`. The command prints the worktree path and branch name.
+
+2. **Verify the current branch before editing.** Navigate to the printed
+   worktree path and run `git branch --show-current`. Confirm it matches
+   `metadata.yaml.branch` (format: `ai/<task-id>-<slug>`). If the branch is
+   wrong, stop and resolve before touching any files.
+
 3. Implement the task according to `task.md`.
-4. Write `report.md` and update `validation.md` inside the task folder
-   (which is already present in the worktree via the `prepare-worktree` sync).
-5. Move the task to `ready_for_review`.
+
+4. Write `report.md` and update `validation.md` inside the task folder in
+   the worktree.
+
+5. **Submit:** `python .ai-workflow/scripts/ai_task.py submit <TASK-ID>`
+
 6. All commits go on the task branch; do not push to `main`.
 
 **Exceptional case — direct main checkout edit:**
 
 Direct edits in the main checkout are allowed only when a task worktree cannot
-be used, for example when git is unavailable or `prepare-worktree` fails for a
-specific environment reason that you cannot resolve. A missing branch value by
-itself is not a valid reason; run `prepare-worktree` or ask for handoff.
-
-If you must use this exception, document the concrete reason in `report.md`
-under "Assumptions", including what prevented worktree creation. Do not write
-only that `metadata.yaml.branch` was null.
+be used (e.g., git unavailable, `claim` fails for an environment reason you
+cannot resolve). If you must use this exception, document the concrete reason
+in `report.md` under "Assumptions". Do not write only that a branch was null.
 
 ---
 
@@ -123,18 +124,21 @@ Do not use an appeal to avoid work, to relitigate style preferences, or when the
 
 ### How to file an appeal
 
-1. Move the task: `changes_requested → in_progress`.
+1. Move the task back to `in_progress`:
+   ```bash
+   python .ai-workflow/scripts/ai_task.py move <TASK-ID> in_progress
+   ```
 2. Add an `## Appeal` section to `report.md` containing:
    - The specific reviewer finding(s) being disputed — quote or reference them by section.
    - Counter-reasoning with references to code, `task.md` requirements, acceptance criteria, or `validation.md` evidence.
    - Whether any code changes were made before appealing. If yes, describe them specifically.
 3. Do not make unrelated code changes alongside an appeal.
-4. Move the task: `in_progress → ready_for_review`.
+4. Submit: `python .ai-workflow/scripts/ai_task.py submit <TASK-ID>`
 
 ### After the reviewer's follow-up decision
 
-- **Appeal accepted** (task moves to `ready_for_human`): no further action needed.
+- **Appeal accepted** (task moves to `done`): no further action needed. Await human merge.
 - **`changes_requested` maintained or revised**: implement the remaining changes. You may not appeal the same finding a second time.
-- **Escalated to human** (task moves to `ready_for_human`, `decision.yaml` contains `escalated_to_human`): wait for the human's decision before proceeding. Do not make further changes until the human resolves the dispute.
+- **Escalated to human** (task is `done`, `decision.yaml` contains `decision: escalated_to_human`): wait for the human's decision. The human will check `decision.yaml` before merging and may apply `human-request-changes` if they disagree. Do not make further changes until the human resolves the dispute.
 
 One appeal is permitted per review dispute. A new dispute on a fresh review round covering different findings may use the appeal mechanism once.

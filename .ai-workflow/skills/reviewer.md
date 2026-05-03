@@ -26,19 +26,15 @@ Return exactly one decision:
 
 Decision meaning:
 
-- `approve`: implementation satisfies the task and can move to `ready_for_human`.
+- `approve`: implementation satisfies the task. Run `review --approve` to move the task to `done`; the human completes the task by merging the branch.
 - `changes_requested`: implementation is directionally acceptable but needs fixes.
 - `reject`: implementation should not be continued, usually due to wrong approach or excessive scope drift.
 
-You may move tasks:
+CLI commands you may run:
 
-- `ready_for_review` → `changes_requested`
-- `ready_for_review` → `ready_for_human`
-- `ready_for_review` → `rejected`
-
-You may not move tasks:
-
-- to `done`
+- `python .ai-workflow/scripts/ai_task.py review <TASK-ID> --approve` — moves `ready_for_review → done`
+- `python .ai-workflow/scripts/ai_task.py review <TASK-ID> --changes-requested` — moves `ready_for_review → changes_requested`
+- `python .ai-workflow/scripts/ai_task.py move <TASK-ID> rejected` — rejects the task
 
 Review output must include:
 
@@ -73,33 +69,12 @@ git -C ../ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow diff 
 1. Only files permitted by `task.md`'s scope are changed.
 2. No forbidden files appear in the diff.
 3. `report.md` and `validation.md` are updated inside the task folder.
-4. The task artifact changes (`report.md`, `validation.md`, status move) travel
-   together with the code changes from the task branch — they become part of the
-   same PR and are merged to `main` together during human acceptance.
-
-**Control checkout status sync:**
-
-The task branch/worktree carries the review artifacts, but the main checkout is
-the human-facing control plane for `board` and `list`. After recording your
-decision in the task worktree, mirror the same task status in the main checkout
-when the main checkout is available.
-
-Before your final response:
-
-1. Run `python .ai-workflow/scripts/ai_task.py list` in the main checkout.
-2. Confirm the task appears under the status matching your decision:
-   - `approve` -> `ready_for_human`
-   - `changes_requested` -> `changes_requested`
-   - `reject` -> `rejected`
-3. If you cannot access or update the main checkout, state explicitly that the
-   status was moved only in the task worktree and the control checkout still
-   needs synchronization.
+4. The task artifact changes travel with the code changes on the same branch — they are merged to `main` together during human acceptance.
 
 **Unrelated changes:**
 
 If the diff includes files that are not in the task scope but were present in
-the main checkout at prepare-worktree time, flag them as a blocking issue. The
-executor should not have committed unrelated files.
+the main checkout at claim time, flag them as a blocking issue.
 
 ---
 
@@ -128,9 +103,9 @@ When `report.md` contains an `## Appeal` section, treat this submission as an ap
 1. Identify the disputed finding(s) from the appeal section.
 2. Re-examine the referenced evidence: `task.md` requirements, acceptance criteria, code, and `validation.md`.
 3. Make exactly one follow-up decision:
-   - **Accept the appeal**: if the executor's evidence shows the implementation is correct. Move the task to `ready_for_human`. Record your reasoning under `## Appeal response` in `review.md`.
+   - **Accept the appeal**: if the executor's evidence shows the implementation is correct. Run `review --approve` to move the task to `done`. Record your reasoning under `## Appeal response` in `review.md`.
    - **Maintain or revise `changes_requested`**: if the finding stands after considering the appeal. Give clearer rationale so the executor knows exactly what must change. Do not re-raise findings the executor did not dispute and that you did not flag as blocking.
-   - **Escalate to human**: if the dispute depends on product judgment, ambiguous acceptance criteria, or conflicting priorities a reviewer alone cannot resolve. Move the task to `ready_for_human`. Write `decision: escalated_to_human` in `decision.yaml`. State the specific question for the human under `## Appeal response` in `review.md`.
+   - **Escalate to human**: if the dispute depends on product judgment, ambiguous acceptance criteria, or conflicting priorities a reviewer alone cannot resolve. Run `review --approve` to move the task to `done`. Write `decision: escalated_to_human` in `decision.yaml`. State the specific question for the human under `## Appeal response` in `review.md`. The human will see `decision: escalated_to_human` before merging and can apply `human-request-changes` if they disagree.
 4. Write the follow-up decision under `## Appeal response` in `review.md` and update `decision.yaml` with one of: `approve`, `changes_requested`, or `escalated_to_human`.
 
 **Limits:**

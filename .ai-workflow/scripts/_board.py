@@ -3,20 +3,35 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 from _core import (
     STATUSES,
+    all_task_dirs,
     ensure_structure,
     normalize_meta,
     parse_simple_yaml,
-    tasks_root,
     workflow_root,
     write_text,
 )
 
 
+def _collect_by_status() -> Dict[str, List[Tuple[Path, dict]]]:
+    tasks_by_status: Dict[str, List[Tuple[Path, dict]]] = {s: [] for s in STATUSES}
+    for task_dir in all_task_dirs():
+        meta = normalize_meta(parse_simple_yaml(task_dir / "metadata.yaml"))
+        status = str(meta.get("status") or "draft")
+        if status not in tasks_by_status:
+            tasks_by_status[status] = []
+        tasks_by_status[status].append((task_dir, meta))
+    return tasks_by_status
+
+
 def generate_board(print_result: bool = True) -> None:
     ensure_structure()
+    tasks_by_status = _collect_by_status()
+
     lines = []
     lines.append("# AI Task Board")
     lines.append("")
@@ -27,11 +42,7 @@ def generate_board(print_result: bool = True) -> None:
         lines.append(f"## {title}")
         lines.append("")
         rows = []
-        status_dir = tasks_root() / status
-        for task_dir in sorted(status_dir.iterdir()) if status_dir.exists() else []:
-            if not task_dir.is_dir():
-                continue
-            meta = normalize_meta(parse_simple_yaml(task_dir / "metadata.yaml"))
+        for task_dir, meta in sorted(tasks_by_status.get(status, []), key=lambda x: x[0].name):
             blocked_by = ", ".join(meta.get("blocked_by", [])) or "-"
             rows.append([
                 str(meta.get("id", "?")),
@@ -61,21 +72,18 @@ def generate_board(print_result: bool = True) -> None:
 
 def list_tasks(args: argparse.Namespace) -> None:
     ensure_structure()
+    tasks_by_status = _collect_by_status()
     for status in STATUSES:
-        status_dir = tasks_root() / status
         print(f"\n{status}")
         print("-" * len(status))
-        found = False
-        for task_dir in sorted(status_dir.iterdir()) if status_dir.exists() else []:
-            if not task_dir.is_dir():
-                continue
-            meta = normalize_meta(parse_simple_yaml(task_dir / "metadata.yaml"))
+        tasks = sorted(tasks_by_status.get(status, []), key=lambda x: x[0].name)
+        if not tasks:
+            print("(empty)")
+            continue
+        for task_dir, meta in tasks:
             parent = meta.get("parent") or "-"
             blocked_by = ", ".join(meta.get("blocked_by", [])) or "-"
             print(
                 f"{meta.get('id', '?')} | {meta.get('title', task_dir.name)} | "
                 f"risk={meta.get('risk', '-')} | parent={parent} | blocked_by={blocked_by}"
             )
-            found = True
-        if not found:
-            print("(empty)")

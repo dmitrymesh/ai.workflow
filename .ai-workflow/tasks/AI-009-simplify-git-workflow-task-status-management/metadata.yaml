@@ -1,6 +1,6 @@
 id: "AI-009"
 title: "Simplify git workflow task status management"
-status: "in_progress"
+status: "ready_for_review"
 risk: "medium"
 area:
   - workflow

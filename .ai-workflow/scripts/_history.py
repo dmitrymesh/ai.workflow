@@ -10,17 +10,18 @@ Usage (via ai_task.py):
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import List, Optional
 
-from _core import load_meta, read_text, tasks_root
+from _core import all_task_dirs, load_meta, read_text
 
 
 def _done_task_dirs() -> List[Path]:
-    done = tasks_root() / "done"
-    if not done.exists():
-        return []
-    return sorted(d for d in done.iterdir() if d.is_dir())
+    return sorted(
+        d for d in all_task_dirs()
+        if str(load_meta(d).get("status", "")) == "done"
+    )
 
 
 def history(args: argparse.Namespace) -> None:
@@ -45,7 +46,11 @@ def history(args: argparse.Namespace) -> None:
                 print(f"Completed: {meta.get('updated_at', '?')}")
                 print()
                 report = read_text(d / "report.md")
-                print(report if report else "(no report.md found)")
+                text = report if report else "(no report.md found)"
+                # Guard against narrow console encodings on Windows (e.g. cp1252)
+                enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+                text = text.encode(enc, errors="replace").decode(enc)
+                print(text)
                 return
         print(f"No done task found: {show_id}")
         return

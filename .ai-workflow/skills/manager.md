@@ -94,48 +94,34 @@ The slug is derived from the task folder name (everything after `<task-id>-`).
 
 ---
 
-## Post-approval handoff: prepare-worktree
+## Post-approval executor handoff
 
-After the human approves a task and moves it to `ready`, the manager must
-prepare the executor's worktree **before** handing off to the executor. This
-step is required because a new worktree only sees committed branch state; if
-the `ready` status change was not committed, the executor in a separate
-worktree will not see it automatically.
-
-This is a required handoff step, not an optional cleanup step. Do not hand a
-task to an executor with `metadata.yaml.branch: null` unless worktree creation
-is impossible in the current environment. If you cannot create the worktree,
-document the concrete blocker in the handoff and use `--print-only` so a human
-or executor can run the equivalent git commands.
-
-**Run:**
+After the human approves a task and moves it to `ready`, the executor
+self-service claims it using the `claim` command — no manager action is needed:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py prepare-worktree AI-003
+python .ai-workflow/scripts/ai_task.py claim AI-003
 ```
 
-This command:
-1. Verifies the task is in `ready` status.
+This command (run by the executor from the main checkout):
+
+1. Verifies the task is `ready` and unblocked.
 2. Computes the branch name (`ai/<task-id>-<slug>`) and worktree path.
 3. Creates the worktree with `git worktree add -b <branch> <path>`.
-4. **Copies the approved task folder from the main checkout into the worktree**
-   so the executor can read `task.md` without requiring a prior commit.
+4. Copies the approved task folder into the worktree so the executor can read `task.md`.
 5. Records the assigned branch in `metadata.yaml.branch`.
-6. Prints the worktree path and branch for handoff.
+6. Moves the task to `in_progress`.
 
-If git is unavailable or the worktree cannot be created automatically, use
-`--print-only` to get the exact manual commands:
+No manager handoff step is required between human approval and executor start.
+The manager's responsibility is to ensure the task contract in `task.md` is
+complete and the task is unblocked before the human moves it to `ready`.
+
+If an executor needs git commands printed without execution (e.g., in an
+environment where git is unavailable), they can use:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py prepare-worktree AI-003 --print-only
+python .ai-workflow/scripts/ai_task.py claim AI-003 --print-only
 ```
-
-**After prepare-worktree completes:**
-
-- Hand the executor the worktree path and branch name printed by the command.
-- Confirm `metadata.yaml.branch` is set before handoff.
-- The executor verifies the branch with `git branch --show-current` before editing.
-- The main checkout remains the source of truth for task approval and metadata.
 
 **Cleanup after task completion or rejection:**
 
@@ -150,7 +136,7 @@ For rejected tasks, use `git branch -D` (force delete) if the branch was never m
 
 ## Consulting done task history
 
-Done task folders (`tasks/done/`) hold original scope (`task.md`), implementation decisions (`report.md`), and review outcomes (`review.md`, `decision.yaml`).
+Done task folders hold original scope (`task.md`), implementation decisions (`report.md`), and review outcomes (`review.md`, `decision.yaml`).
 
 **When to consult:**
 - Creating a follow-up task that overlaps with a completed one — read the related task's `report.md` for prior decisions and known risks.
