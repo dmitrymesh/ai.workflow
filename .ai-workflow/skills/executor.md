@@ -102,3 +102,39 @@ Before implementing, check whether prior completed work is directly relevant:
 **Do not load all done tasks by default.** Token cost and stale context outweigh the benefit for unrelated tasks.
 
 **Source of truth**: current source code and `task.md` take precedence over historical reports. A `report.md` describes what the executor intended; it may not reflect subsequent fixes or refactors.
+
+---
+
+## Review appeal
+
+After receiving a `changes_requested` review, the executor must choose one of two paths:
+
+1. **Implement the requested changes** — the standard path.
+2. **File one appeal** — allowed once per review dispute when the executor believes the implementation is correct and the reviewer has misunderstood the task, code, or validation evidence.
+
+### When an appeal is appropriate
+
+An appeal is appropriate only when:
+- A reviewer finding contradicts explicit requirements or acceptance criteria in `task.md`.
+- The reviewer appears to have missed evidence already present in `report.md` or `validation.md`.
+- The requested change would demonstrably worsen the implementation or violate task scope.
+
+Do not use an appeal to avoid work, to relitigate style preferences, or when the finding is clearly valid.
+
+### How to file an appeal
+
+1. Move the task: `changes_requested → in_progress`.
+2. Add an `## Appeal` section to `report.md` containing:
+   - The specific reviewer finding(s) being disputed — quote or reference them by section.
+   - Counter-reasoning with references to code, `task.md` requirements, acceptance criteria, or `validation.md` evidence.
+   - Whether any code changes were made before appealing. If yes, describe them specifically.
+3. Do not make unrelated code changes alongside an appeal.
+4. Move the task: `in_progress → ready_for_review`.
+
+### After the reviewer's follow-up decision
+
+- **Appeal accepted** (task moves to `ready_for_human`): no further action needed.
+- **`changes_requested` maintained or revised**: implement the remaining changes. You may not appeal the same finding a second time.
+- **Escalated to human** (task moves to `ready_for_human`, `decision.yaml` contains `escalated_to_human`): wait for the human's decision before proceeding. Do not make further changes until the human resolves the dispute.
+
+One appeal is permitted per review dispute. A new dispute on a fresh review round covering different findings may use the appeal mechanism once.
