@@ -17,6 +17,7 @@ Usage:
   python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001 --print-only
   python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
   python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
+  python .ai-workflow/scripts/ai_task.py roles
   python .ai-workflow/scripts/ai_task.py history
   python .ai-workflow/scripts/ai_task.py history --area workflow
   python .ai-workflow/scripts/ai_task.py history --keyword install
@@ -38,14 +39,62 @@ from __future__ import annotations
 
 import argparse
 
+from pathlib import Path
+
 from _board import generate_board, list_tasks
-from _core import RELATIONSHIP_KINDS, STATUSES, ensure_structure, load_config, update_config_profile
+from _core import RELATIONSHIP_KINDS, STATUSES, ensure_structure, load_config, update_config_profile, workflow_root
 from _history import history
 from _install import install_plan
 from _relationships import link_tasks, show_task, unlink_tasks
 from _tasks import create_task, move_task, print_task_path
 from _validate import validate
 from _worktree import prepare_worktree
+
+
+def _parse_agents_from_config(config_path: Path) -> dict:
+    """Parse the agents block from config.yaml (handles nested YAML the simple parser skips)."""
+    if not config_path.exists():
+        return {}
+    agents: dict = {}
+    in_agents = False
+    current_role: str | None = None
+    for raw in config_path.read_text(encoding="utf-8").splitlines():
+        line = raw.rstrip()
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent == 0:
+            in_agents = stripped == "agents:"
+            current_role = None
+            continue
+        if not in_agents:
+            continue
+        if ":" not in stripped:
+            continue
+        key, _, val = stripped.partition(":")
+        key = key.strip()
+        val = val.strip()
+        if indent == 2:
+            current_role = key
+            agents[current_role] = {}
+        elif indent == 4 and current_role is not None:
+            agents[current_role][key] = val
+    return agents
+
+
+def print_roles(args: argparse.Namespace) -> None:
+    config_path = workflow_root() / "config.yaml"
+    agents = _parse_agents_from_config(config_path)
+    if not agents:
+        print("No roles configured in .ai-workflow/config.yaml")
+        return
+    print(f"{'Role':<12} {'Tool':<20} Skill")
+    print("-" * 60)
+    for role, spec in agents.items():
+        tool = spec.get("default_tool", "(not set)") if isinstance(spec, dict) else str(spec)
+        skill = spec.get("skill", "(not set)") if isinstance(spec, dict) else "(not set)"
+        print(f"{role:<12} {tool:<20} {skill}")
 
 
 def init(args: argparse.Namespace) -> None:
@@ -143,6 +192,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Create/update protocol-owned files in the target (never overwrites integration points)",
     )
     p_install.set_defaults(func=install_plan)
+
+    p_roles = sub.add_parser(
+        "roles",
+        help="Print configured role assignments (role, default_tool, skill path) from config.yaml",
+    )
+    p_roles.set_defaults(func=print_roles)
 
     p_history = sub.add_parser(
         "history",

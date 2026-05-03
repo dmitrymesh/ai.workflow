@@ -77,6 +77,24 @@ git -C ../ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow diff 
    together with the code changes from the task branch — they become part of the
    same PR and are merged to `main` together during human acceptance.
 
+**Control checkout status sync:**
+
+The task branch/worktree carries the review artifacts, but the main checkout is
+the human-facing control plane for `board` and `list`. After recording your
+decision in the task worktree, mirror the same task status in the main checkout
+when the main checkout is available.
+
+Before your final response:
+
+1. Run `python .ai-workflow/scripts/ai_task.py list` in the main checkout.
+2. Confirm the task appears under the status matching your decision:
+   - `approve` -> `ready_for_human`
+   - `changes_requested` -> `changes_requested`
+   - `reject` -> `rejected`
+3. If you cannot access or update the main checkout, state explicitly that the
+   status was moved only in the task worktree and the control checkout still
+   needs synchronization.
+
 **Unrelated changes:**
 
 If the diff includes files that are not in the task scope but were present in

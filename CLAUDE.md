@@ -1,5 +1,9 @@
 # Claude Code Instructions
 
+> **Adapter entrypoint** — This file is the Claude Code adapter for this repository.
+> By default, Claude Code is assigned the **executor** role. Check `.ai-workflow/config.yaml`
+> (`agents.executor.default_tool`) to confirm or change the role assignment.
+
 This repository uses `.ai-workflow/` for AI task execution.
 
 Before executing a task:

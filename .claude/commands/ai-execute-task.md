@@ -1,3 +1,6 @@
+> Claude Code adapter command for the executor role.
+> Role assignments are configured in `.ai-workflow/config.yaml`.
+
 Read `.ai-workflow/skills/executor.md`.
 
 Execute task: $ARGUMENTS

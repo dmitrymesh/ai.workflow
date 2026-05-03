@@ -59,7 +59,11 @@ task-specific isolated branches and worktrees.
 
 1. Confirm your worktree path and branch in `metadata.yaml.branch`. The manager
    should have run `prepare-worktree` before handing the task to you; if
-   `branch` is null the manager step was skipped — ask or run it yourself.
+   `branch` is null the manager step was skipped. Do not treat direct edits in
+   the main checkout as an equivalent option. Before editing, stop and either
+   ask for the worktree handoff or run
+   `python .ai-workflow/scripts/ai_task.py prepare-worktree <TASK-ID>`
+   yourself, then continue in the generated worktree.
 2. **Verify the current branch before editing.** Run
    `git branch --show-current` and confirm it matches `metadata.yaml.branch`
    (format: `ai/<task-id>-<slug>`). If the branch is wrong, stop and resolve
@@ -72,9 +76,14 @@ task-specific isolated branches and worktrees.
 
 **Exceptional case — direct main checkout edit:**
 
-If you cannot use a worktree (e.g., git is unavailable in your environment),
-edit directly in the main checkout and document this in `report.md` under
-"Assumptions", explaining why the worktree could not be used.
+Direct edits in the main checkout are allowed only when a task worktree cannot
+be used, for example when git is unavailable or `prepare-worktree` fails for a
+specific environment reason that you cannot resolve. A missing branch value by
+itself is not a valid reason; run `prepare-worktree` or ask for handoff.
+
+If you must use this exception, document the concrete reason in `report.md`
+under "Assumptions", including what prevented worktree creation. Do not write
+only that `metadata.yaml.branch` was null.
 
 ---
 

@@ -34,6 +34,10 @@ transitions:
   done: []
   rejected: []
 
+# Role assignments: source of truth for which tool fulfils each role.
+# Edit default_tool to point to any compatible LLM/agent runtime.
+# These defaults (codex/claude) are examples, not requirements.
+# Run: python .ai-workflow/scripts/ai_task.py roles
 agents:
   manager:
     default_tool: codex

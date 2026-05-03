@@ -1,12 +1,16 @@
 # Repository Agent Instructions
 
+> **Adapter entrypoint** — This file is for Codex-compatible and generic agent environments.
+> For other tools, use the tool-specific adapter if one exists (e.g. `CLAUDE.md` for Claude Code),
+> or read `.ai-workflow/README.md` directly.
+
 This repository uses the Portable AI Task Protocol.
 
 Before managing, executing, or reviewing AI tasks:
 
 1. Read `.ai-workflow/README.md` if present.
-2. Read `.ai-workflow/config.yaml`.
-3. Read the relevant role skill:
+2. Read `.ai-workflow/config.yaml` — it defines which role this tool is assigned to (`agents.manager`, `agents.executor`, or `agents.reviewer`).
+3. Read the role skill for your assigned role:
    - `.ai-workflow/skills/manager.md`
    - `.ai-workflow/skills/executor.md`
    - `.ai-workflow/skills/reviewer.md`

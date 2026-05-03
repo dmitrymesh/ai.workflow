@@ -102,6 +102,12 @@ step is required because a new worktree only sees committed branch state; if
 the `ready` status change was not committed, the executor in a separate
 worktree will not see it automatically.
 
+This is a required handoff step, not an optional cleanup step. Do not hand a
+task to an executor with `metadata.yaml.branch: null` unless worktree creation
+is impossible in the current environment. If you cannot create the worktree,
+document the concrete blocker in the handoff and use `--print-only` so a human
+or executor can run the equivalent git commands.
+
 **Run:**
 
 ```bash
@@ -127,6 +133,7 @@ python .ai-workflow/scripts/ai_task.py prepare-worktree AI-003 --print-only
 **After prepare-worktree completes:**
 
 - Hand the executor the worktree path and branch name printed by the command.
+- Confirm `metadata.yaml.branch` is set before handoff.
 - The executor verifies the branch with `git branch --show-current` before editing.
 - The main checkout remains the source of truth for task approval and metadata.
 

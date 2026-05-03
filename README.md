@@ -10,7 +10,7 @@ task contract → implementation report → review decision → validation → d
 
 The system is file-based, git-friendly, and designed for workflows where one AI agent prepares/reviews tasks and another AI agent implements them.
 
-Example role split:
+Example role split (default — configurable in `.ai-workflow/config.yaml`):
 
 ```text
 Codex       → manager / reviewer
@@ -18,6 +18,10 @@ Claude Code → executor
 Human       → validator
 Human       → final owner
 ```
+
+Any compatible LLM or agent runtime can fill any role. Edit the `agents:` block in
+`.ai-workflow/config.yaml` to change assignments. Run
+`python .ai-workflow/scripts/ai_task.py roles` to print the current mapping.
 
 ## Core idea
 
@@ -262,7 +266,7 @@ The executor should not mark tasks as `done`.
 
 ### 1. Manager prepares task
 
-Codex or another manager agent creates or updates a task folder.
+The manager agent (configured in `.ai-workflow/config.yaml` under `agents.manager` — default: Codex) creates or updates a task folder.
 
 The manager should fill:
 
@@ -297,7 +301,7 @@ Only a human should perform this step.
 
 ### 3. Executor implements
 
-Claude Code or another executor agent reads:
+The executor agent (configured in `.ai-workflow/config.yaml` under `agents.executor` — default: Claude Code) reads:
 
 ```text
 .ai-workflow/skills/executor.md
@@ -319,7 +323,7 @@ ready_for_review
 
 ### 4. Reviewer checks result
 
-Codex or another reviewer agent reads:
+The reviewer agent (configured in `.ai-workflow/config.yaml` under `agents.reviewer` — default: Codex) reads:
 
 ```text
 task.md
@@ -435,10 +439,12 @@ Role instructions for AI agents.
 
 Optional Claude Code slash commands.
 
-## Example Codex manager prompt
+## Example manager prompt (default tool: Codex — adapt using config.yaml)
 
 ```text
-Read AGENTS.md and .ai-workflow/skills/manager.md.
+Read your adapter entrypoint (e.g. AGENTS.md) or .ai-workflow/README.md.
+Read .ai-workflow/config.yaml to confirm your role.
+Read .ai-workflow/skills/manager.md.
 
 Create a new task for:
 "Add RewardPreviewService".
@@ -451,10 +457,12 @@ Leave the task in draft.
 Do not move the task to ready — report that human approval is needed before execution.
 ```
 
-## Example Claude executor prompt
+## Example executor prompt (default tool: Claude Code — adapt using config.yaml)
 
 ```text
-Read CLAUDE.md.
+Read your adapter entrypoint (e.g. CLAUDE.md) or .ai-workflow/README.md.
+Read .ai-workflow/config.yaml to confirm your role.
+Read .ai-workflow/skills/executor.md.
 Execute task AI-001.
 
 Rules:
@@ -466,10 +474,12 @@ Rules:
 - Move the task to ready_for_review when finished.
 ```
 
-## Example Codex reviewer prompt
+## Example reviewer prompt (default tool: Codex — adapt using config.yaml)
 
 ```text
-Read AGENTS.md and .ai-workflow/skills/reviewer.md.
+Read your adapter entrypoint (e.g. AGENTS.md) or .ai-workflow/README.md.
+Read .ai-workflow/config.yaml to confirm your role.
+Read .ai-workflow/skills/reviewer.md.
 
 Review task AI-001.
 

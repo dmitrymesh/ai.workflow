@@ -1,6 +1,6 @@
 # AI Task Board
 
-Generated: 2026-05-03 00:57:58
+Generated: 2026-05-03 16:08:26
 
 ## Draft
 
@@ -20,7 +20,9 @@ _Empty_
 
 ## Changes Requested
 
-_Empty_
+| ID | Title | Risk | Area | Branch | Parent | Blocked By |
+|---|---|---|---|---|---|---|
+| AI-008 | Add executor review appeal step | medium | workflow | ai/AI-008-add-executor-review-appeal-step | - | - |
 
 ## Ready For Human
 
@@ -36,6 +38,7 @@ _Empty_
 | AI-004 | Refactor ai_task CLI module | medium | workflow, cli, maintenance | - | - | - |
 | AI-005 | Add safe project installation workflow | medium | workflow, install, docs, cli | - | - | - |
 | AI-006 | Evaluate done tasks as project memory | low | workflow, docs, context | - | - | - |
+| AI-007 | Make agent role mapping model agnostic | medium | workflow, config, docs, cli | - | - | - |
 
 ## Rejected
 

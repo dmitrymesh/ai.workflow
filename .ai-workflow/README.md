@@ -4,6 +4,37 @@ This folder contains the local AI task protocol for this repository.
 
 ---
 
+## Protocol entrypoints
+
+### Universal entrypoints (tool-agnostic)
+
+| Path | Purpose |
+|------|---------|
+| `.ai-workflow/README.md` | Protocol overview and setup |
+| `.ai-workflow/config.yaml` | Role assignments, statuses, transitions |
+| `.ai-workflow/skills/<role>.md` | Role instructions (manager, executor, reviewer) |
+
+### Adapter-specific entrypoints
+
+These files are optional helpers for specific tools. They are not the protocol source of truth.
+
+| Path | Purpose |
+|------|---------|
+| `AGENTS.md` | Codex-compatible / generic agent adapter |
+| `CLAUDE.md` | Claude Code adapter |
+| `.claude/commands/*` | Claude Code slash command conveniences |
+
+Projects may also add `GEMINI.md`, `CURSOR.md`, or other adapter files for their tool.
+
+### Onboarding a new agent or tool
+
+1. If a tool-specific adapter exists (e.g. `CLAUDE.md` for Claude Code, `AGENTS.md` for Codex), start there.
+2. Otherwise read `.ai-workflow/README.md`.
+3. Then read `.ai-workflow/config.yaml` to find the assigned role (`agents.*`).
+4. Then read the role skill: `.ai-workflow/skills/<role>.md`.
+
+---
+
 ## Ownership model
 
 | Path | Owner | Notes |
@@ -42,17 +73,21 @@ or any existing `.claude/commands/*` file.
 
 ### Merge snippet: AGENTS.md
 
+`AGENTS.md` is an adapter entrypoint for Codex-compatible and generic agent environments.
 If `AGENTS.md` already exists, append this section (adapt to your project):
 
 ```markdown
 ## Portable AI Task Protocol
 
+> Adapter entrypoint for Codex-compatible / generic agent environments.
+> For other tools, use a tool-specific adapter (e.g. CLAUDE.md) or read .ai-workflow/README.md directly.
+
 This repository uses the Portable AI Task Protocol.
 Before managing, executing, or reviewing AI tasks:
 
 1. Read `.ai-workflow/README.md`.
-2. Read `.ai-workflow/config.yaml`.
-3. Read the relevant role skill:
+2. Read `.ai-workflow/config.yaml` — it defines which role this tool is assigned to.
+3. Read the role skill for your assigned role:
    - `.ai-workflow/skills/manager.md`
    - `.ai-workflow/skills/executor.md`
    - `.ai-workflow/skills/reviewer.md`
@@ -67,10 +102,14 @@ General rules:
 
 ### Merge snippet: CLAUDE.md
 
+`CLAUDE.md` is a Claude Code adapter entrypoint. By default, Claude Code is assigned the executor role.
 If `CLAUDE.md` already exists, append this section (adapt to your project):
 
 ```markdown
 ## AI Task Protocol
+
+> Claude Code adapter entrypoint. By default, Claude Code is assigned the executor role.
+> Check `.ai-workflow/config.yaml` (`agents.executor.default_tool`) to confirm or change the role assignment.
 
 This repository uses `.ai-workflow/` for AI task execution.
 Before executing a task:
@@ -361,6 +400,14 @@ Check:
 The task artifact changes (`report.md`, `validation.md`, folder status) travel
 with the code changes in the same branch/PR and are merged to `main` together
 during human acceptance.
+
+Because the main checkout is the human-facing control plane for `board` and
+`list`, reviewers must also mirror the final review status there when it is
+available. After recording the decision in the task worktree, move the task in
+the main checkout to the same outcome (`ready_for_human`,
+`changes_requested`, or `rejected`) and rerun `list` from the main checkout to
+confirm the visible board state. If the main checkout cannot be updated, say so
+explicitly in the review handoff.
 
 ### Cleanup
 
