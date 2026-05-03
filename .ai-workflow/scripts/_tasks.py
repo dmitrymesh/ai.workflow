@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import shutil
 
 from _board import generate_board
 from _core import (
@@ -39,7 +38,8 @@ def create_task(args: argparse.Namespace) -> None:
         "updated_at": today(),
     }
 
-    task_dir = tasks_root() / status / f"{task_id}-{slug}"
+    # Stable path: tasks/<id>-<slug>/  (status lives in metadata only)
+    task_dir = tasks_root() / f"{task_id}-{slug}"
     if task_dir.exists():
         raise SystemExit(f"Task directory already exists: {task_dir}")
 
@@ -59,11 +59,13 @@ def create_task(args: argparse.Namespace) -> None:
 
 
 def move_task(args: argparse.Namespace) -> None:
+    """Update task status in metadata.yaml without moving the folder."""
     if args.status not in STATUSES:
         raise SystemExit(f"Unknown status: {args.status}. Allowed: {', '.join(STATUSES)}")
 
     task_dir, meta = find_task(args.task_id)
-    current_status = task_dir.parent.name
+    # Authoritative status is in metadata; fall back to parent dir name for legacy tasks
+    current_status = str(meta.get("status") or task_dir.parent.name)
     target_status = args.status
 
     if not args.force and not allowed_transition(current_status, target_status):
@@ -72,19 +74,78 @@ def move_task(args: argparse.Namespace) -> None:
             f"Use --force to override."
         )
 
-    target_dir = tasks_root() / target_status / task_dir.name
-    if target_dir.exists():
-        raise SystemExit(f"Target directory already exists: {target_dir}")
-
     meta["status"] = target_status
     meta["updated_at"] = today()
     write_text(task_dir / "metadata.yaml", dump_simple_yaml(meta))
 
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(task_dir), str(target_dir))
-
     generate_board(print_result=False)
     print(f"Moved {meta.get('id', args.task_id)}: {current_status} -> {target_status}")
+
+
+def submit_task(args: argparse.Namespace) -> None:
+    """Executor submit: move task from in_progress or changes_requested to ready_for_review."""
+    task_dir, meta = find_task(args.task_id)
+    current_status = str(meta.get("status") or task_dir.parent.name)
+
+    if current_status not in ("in_progress", "changes_requested"):
+        raise SystemExit(
+            f"submit requires task to be in_progress or changes_requested "
+            f"(current: {current_status})"
+        )
+
+    meta["status"] = "ready_for_review"
+    meta["updated_at"] = today()
+    write_text(task_dir / "metadata.yaml", dump_simple_yaml(meta))
+    generate_board(print_result=False)
+    print(f"Submitted {meta.get('id', args.task_id)}: {current_status} -> ready_for_review")
+
+
+def review_task(args: argparse.Namespace) -> None:
+    """Reviewer action: approve (-> done) or request changes (-> changes_requested)."""
+    task_dir, meta = find_task(args.task_id)
+    current_status = str(meta.get("status") or task_dir.parent.name)
+
+    if current_status != "ready_for_review":
+        raise SystemExit(
+            f"review requires task to be ready_for_review (current: {current_status})"
+        )
+
+    if args.approve:
+        target = "done"
+    elif args.changes_requested:
+        target = "changes_requested"
+    else:
+        raise SystemExit("review requires --approve or --changes-requested")
+
+    meta["status"] = target
+    meta["updated_at"] = today()
+    write_text(task_dir / "metadata.yaml", dump_simple_yaml(meta))
+    generate_board(print_result=False)
+    print(f"Reviewed {meta.get('id', args.task_id)}: {current_status} -> {target}")
+
+
+def human_request_changes(args: argparse.Namespace) -> None:
+    """Human pre-merge rejection: move done -> changes_requested with optional feedback."""
+    task_dir, meta = find_task(args.task_id)
+    current_status = str(meta.get("status") or task_dir.parent.name)
+
+    if current_status != "done":
+        raise SystemExit(
+            f"human-request-changes requires task to be done (current: {current_status})"
+        )
+
+    meta["status"] = "changes_requested"
+    meta["updated_at"] = today()
+    write_text(task_dir / "metadata.yaml", dump_simple_yaml(meta))
+
+    if getattr(args, "feedback", None):
+        review_path = task_dir / "review.md"
+        existing = review_path.read_text(encoding="utf-8") if review_path.exists() else ""
+        feedback_block = f"\n\n## Human pre-merge request ({today()})\n\n{args.feedback}\n"
+        write_text(review_path, existing + feedback_block)
+
+    generate_board(print_result=False)
+    print(f"Human request: {meta.get('id', args.task_id)}: {current_status} -> changes_requested")
 
 
 def print_task_path(args: argparse.Namespace) -> None:

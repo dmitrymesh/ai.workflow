@@ -16,19 +16,24 @@ STATUSES = [
     "in_progress",
     "ready_for_review",
     "changes_requested",
-    "ready_for_human",
     "done",
     "rejected",
 ]
+
+# Legacy status directory names used before the stable-path migration.
+# all_task_dirs() still reads tasks inside these dirs for backward compat.
+_LEGACY_STATUS_DIRS = {
+    "draft", "ready", "in_progress", "ready_for_review",
+    "changes_requested", "ready_for_human", "done", "rejected",
+}
 
 DEFAULT_TRANSITIONS: Dict[str, List[str]] = {
     "draft": ["ready", "rejected"],
     "ready": ["in_progress", "rejected"],
     "in_progress": ["ready_for_review", "rejected"],
-    "ready_for_review": ["changes_requested", "ready_for_human", "rejected"],
-    "changes_requested": ["in_progress", "rejected"],
-    "ready_for_human": ["done", "changes_requested", "rejected"],
-    "done": [],
+    "ready_for_review": ["changes_requested", "done", "rejected"],
+    "changes_requested": ["ready_for_review", "rejected"],
+    "done": ["changes_requested"],
     "rejected": [],
 }
 
@@ -69,8 +74,7 @@ def slugify(title: str) -> str:
 
 def ensure_structure() -> None:
     wf = workflow_root()
-    for status in STATUSES:
-        (wf / "tasks" / status).mkdir(parents=True, exist_ok=True)
+    (wf / "tasks").mkdir(parents=True, exist_ok=True)
     for sub in ["templates", "skills", "scripts", "profiles"]:
         (wf / sub).mkdir(parents=True, exist_ok=True)
 
@@ -252,16 +256,30 @@ def next_task_id() -> str:
 
 
 def all_task_dirs() -> List[Path]:
+    """Return all task directories.
+
+    Supports two layouts:
+    - Stable (new): tasks/<task-id>-<slug>/  (metadata.yaml present directly)
+    - Legacy (old): tasks/<status>/<task-id>-<slug>/  (status encoded in dir name)
+
+    Both layouts may coexist during migration.  Run `migrate` to move all tasks
+    to the stable layout.
+    """
     result = []
     root = tasks_root()
     if not root.exists():
         return result
-    for status in STATUSES:
-        status_dir = root / status
-        if status_dir.exists():
-            for child in sorted(status_dir.iterdir()):
-                if child.is_dir():
-                    result.append(child)
+    for child in sorted(root.iterdir()):
+        if not child.is_dir():
+            continue
+        if child.name in _LEGACY_STATUS_DIRS:
+            # Legacy layout: iterate task folders inside this status dir
+            for task_dir in sorted(child.iterdir()):
+                if task_dir.is_dir() and (task_dir / "metadata.yaml").exists():
+                    result.append(task_dir)
+        elif (child / "metadata.yaml").exists():
+            # Stable layout: task folder directly in tasks/
+            result.append(child)
     return result
 
 

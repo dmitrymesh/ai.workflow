@@ -1,6 +1,6 @@
 # AI Task Board
 
-Generated: 2026-05-03 16:08:26
+Generated: 2026-05-03 17:57:09
 
 ## Draft
 
@@ -16,15 +16,12 @@ _Empty_
 
 ## Ready For Review
 
-_Empty_
-
-## Changes Requested
-
 | ID | Title | Risk | Area | Branch | Parent | Blocked By |
 |---|---|---|---|---|---|---|
 | AI-008 | Add executor review appeal step | medium | workflow | ai/AI-008-add-executor-review-appeal-step | - | - |
+| AI-009 | Simplify git workflow task status management | medium | workflow | ai/AI-009-simplify-git-workflow-task-status-management | - | - |
 
-## Ready For Human
+## Changes Requested
 
 _Empty_
 

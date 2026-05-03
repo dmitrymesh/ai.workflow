@@ -6,7 +6,6 @@ statuses:
   - in_progress
   - ready_for_review
   - changes_requested
-  - ready_for_human
   - done
   - rejected
 
@@ -22,16 +21,13 @@ transitions:
     - rejected
   ready_for_review:
     - changes_requested
-    - ready_for_human
+    - done
     - rejected
   changes_requested:
-    - in_progress
+    - ready_for_review
     - rejected
-  ready_for_human:
-    - done
+  done:
     - changes_requested
-    - rejected
-  done: []
   rejected: []
 
 # Role assignments: source of truth for which tool fulfils each role.

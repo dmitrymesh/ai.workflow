@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional
 
 from _core import (
     RELATIONSHIP_LIST_FIELDS,
+    STATUSES,
+    _LEGACY_STATUS_DIRS,
     all_task_dirs,
     ensure_structure,
     normalize_meta,
@@ -21,7 +23,6 @@ def validate(args: Optional[argparse.Namespace] = None) -> None:
     metas: Dict[str, Dict[str, Any]] = {}
 
     for task_dir in all_task_dirs():
-        status_dir = task_dir.parent.name
         meta_path = task_dir / "metadata.yaml"
         if not meta_path.exists():
             errors.append(f"Missing metadata.yaml: {task_dir}")
@@ -39,8 +40,17 @@ def validate(args: Optional[argparse.Namespace] = None) -> None:
             metas[task_id] = meta
 
         meta_status = meta.get("status")
-        if meta_status != status_dir:
-            errors.append(f"Status mismatch for {task_id}: folder={status_dir}, metadata={meta_status}")
+        if meta_status not in STATUSES:
+            errors.append(f"Invalid status '{meta_status}' in {task_dir}")
+
+        # For legacy layout tasks, also check folder/status consistency
+        parent_name = task_dir.parent.name
+        if parent_name in _LEGACY_STATUS_DIRS and parent_name != meta_status:
+            errors.append(
+                f"Status mismatch for {task_id}: "
+                f"folder={parent_name}, metadata={meta_status} "
+                f"(run 'migrate' to move to stable layout)"
+            )
 
         for required in ["task.md", "report.md", "review.md", "decision.yaml", "validation.md"]:
             if not (task_dir / required).exists():

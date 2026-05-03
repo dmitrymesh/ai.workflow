@@ -6,6 +6,14 @@ Usage:
   python .ai-workflow/scripts/ai_task.py init --profile unity
   python .ai-workflow/scripts/ai_task.py create "Add RewardPreviewService" --risk low --area gameplay,tests
   python .ai-workflow/scripts/ai_task.py move AI-001 ready
+  python .ai-workflow/scripts/ai_task.py claim AI-001
+  python .ai-workflow/scripts/ai_task.py claim AI-001 --print-only
+  python .ai-workflow/scripts/ai_task.py submit AI-001
+  python .ai-workflow/scripts/ai_task.py review AI-001 --approve
+  python .ai-workflow/scripts/ai_task.py review AI-001 --changes-requested
+  python .ai-workflow/scripts/ai_task.py human-request-changes AI-001
+  python .ai-workflow/scripts/ai_task.py human-request-changes AI-001 --feedback "Needs more tests"
+  python .ai-workflow/scripts/ai_task.py migrate
   python .ai-workflow/scripts/ai_task.py list
   python .ai-workflow/scripts/ai_task.py board
   python .ai-workflow/scripts/ai_task.py validate
@@ -27,9 +35,10 @@ Module layout (all under .ai-workflow/scripts/):
   _core.py          constants, path utils, YAML, config, task discovery, relationship utils
   _board.py         generate_board, list_tasks
   _validate.py      validate
-  _tasks.py         create_task, move_task, print_task_path
+  _tasks.py         create_task, move_task, submit_task, review_task, human_request_changes, print_task_path
   _relationships.py link_tasks, unlink_tasks, show_task
-  _worktree.py      prepare_worktree
+  _worktree.py      prepare_worktree, claim_task
+  _migrate.py       migrate
   _install.py       install_plan
   _history.py       history
   ai_task.py        init, build_parser, main  (this file — CLI entrypoint only)
@@ -45,10 +54,11 @@ from _board import generate_board, list_tasks
 from _core import RELATIONSHIP_KINDS, STATUSES, ensure_structure, load_config, update_config_profile, workflow_root
 from _history import history
 from _install import install_plan
+from _migrate import migrate
 from _relationships import link_tasks, show_task, unlink_tasks
-from _tasks import create_task, move_task, print_task_path
+from _tasks import create_task, human_request_changes, move_task, print_task_path, review_task, submit_task
 from _validate import validate
-from _worktree import prepare_worktree
+from _worktree import claim_task, prepare_worktree
 
 
 def _parse_agents_from_config(config_path: Path) -> dict:
@@ -119,11 +129,56 @@ def build_parser() -> argparse.ArgumentParser:
     p_create.add_argument("--area", default="")
     p_create.set_defaults(func=create_task)
 
-    p_move = sub.add_parser("move", help="Move a task to another status")
+    p_move = sub.add_parser("move", help="Move a task to another status (low-level; prefer claim/submit/review)")
     p_move.add_argument("task_id")
     p_move.add_argument("status", choices=STATUSES)
     p_move.add_argument("--force", action="store_true")
     p_move.set_defaults(func=move_task)
+
+    p_claim = sub.add_parser(
+        "claim",
+        help=(
+            "Executor self-service claim: find a ready task, create a worktree on a new "
+            "branch, sync the task folder, and move the task to in_progress."
+        ),
+    )
+    p_claim.add_argument("task_id")
+    p_claim.add_argument(
+        "--print-only",
+        action="store_true",
+        help="Print the git commands instead of running them",
+    )
+    p_claim.set_defaults(func=claim_task)
+
+    p_submit = sub.add_parser(
+        "submit",
+        help="Executor submit: record implementation complete, move in_progress/changes_requested -> ready_for_review",
+    )
+    p_submit.add_argument("task_id")
+    p_submit.set_defaults(func=submit_task)
+
+    p_review = sub.add_parser(
+        "review",
+        help="Reviewer decision: --approve moves ready_for_review -> done; --changes-requested moves to changes_requested",
+    )
+    p_review.add_argument("task_id")
+    p_review.add_argument("--approve", action="store_true")
+    p_review.add_argument("--changes-requested", action="store_true", dest="changes_requested")
+    p_review.set_defaults(func=review_task)
+
+    p_hrc = sub.add_parser(
+        "human-request-changes",
+        help="Human pre-merge: move done -> changes_requested with optional durable feedback in review.md",
+    )
+    p_hrc.add_argument("task_id")
+    p_hrc.add_argument("--feedback", default=None, help="Feedback to append to review.md")
+    p_hrc.set_defaults(func=human_request_changes)
+
+    p_migrate = sub.add_parser(
+        "migrate",
+        help="Migrate tasks from the legacy status-by-directory layout to the stable flat layout",
+    )
+    p_migrate.set_defaults(func=migrate)
 
     p_list = sub.add_parser("list", help="List tasks by status")
     p_list.set_defaults(func=list_tasks)
@@ -163,10 +218,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_prepare = sub.add_parser(
         "prepare-worktree",
         help=(
-            "Prepare a task-specific git worktree for execution. "
-            "Verifies the task is 'ready', computes branch/worktree names, "
-            "creates the worktree, syncs the approved task folder, and records "
-            "the branch in metadata.yaml."
+            "Prepare a task-specific git worktree without claiming. "
+            "Legacy command: prefer 'claim' for the standard executor workflow. "
+            "Does NOT move the task to in_progress."
         ),
     )
     p_prepare.add_argument("task_id")
