@@ -1,6 +1,6 @@
 # AI Task Board
 
-Generated: 2026-05-03 16:08:26
+Generated: 2026-05-03 17:30:55
 
 ## Draft
 
@@ -12,7 +12,9 @@ _Empty_
 
 ## In Progress
 
-_Empty_
+| ID | Title | Risk | Area | Branch | Parent | Blocked By |
+|---|---|---|---|---|---|---|
+| AI-009 | Simplify git workflow task status management | medium | workflow | ai/AI-009-simplify-git-workflow-task-status-management | - | - |
 
 ## Ready For Review
 
@@ -20,9 +22,7 @@ _Empty_
 
 ## Changes Requested
 
-| ID | Title | Risk | Area | Branch | Parent | Blocked By |
-|---|---|---|---|---|---|---|
-| AI-008 | Add executor review appeal step | medium | workflow | ai/AI-008-add-executor-review-appeal-step | - | - |
+_Empty_
 
 ## Ready For Human
 
@@ -39,6 +39,7 @@ _Empty_
 | AI-005 | Add safe project installation workflow | medium | workflow, install, docs, cli | - | - | - |
 | AI-006 | Evaluate done tasks as project memory | low | workflow, docs, context | - | - | - |
 | AI-007 | Make agent role mapping model agnostic | medium | workflow, config, docs, cli | - | - | - |
+| AI-008 | Add executor review appeal step | medium | workflow | ai/AI-008-add-executor-review-appeal-step | - | - |
 
 ## Rejected
 
