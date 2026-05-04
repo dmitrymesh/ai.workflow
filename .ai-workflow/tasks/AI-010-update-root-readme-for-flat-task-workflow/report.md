@@ -33,3 +33,15 @@ None.
 ## Known risks
 
 None. Documentation-only change.
+
+---
+
+## Review fixes (changes_requested round 1)
+
+Addressed all three blocking issues from the review:
+
+1. **Lifecycle transition mismatch** — replaced `any status → rejected` with explicit per-status rejected transitions matching `config.yaml`; added `done → changes_requested (via human-request-changes)`; fixed executor role entry from `changes_requested → in_progress` to `changes_requested → ready_for_review`.
+
+2. **Missing commands** — added `human-request-changes` and `migrate` examples to the Basic commands section with brief descriptions of their purpose.
+
+3. **Untracked task artifacts** — staged and committed `task.md`, `metadata.yaml`, `review.md`, `decision.yaml` so the full task folder travels with the branch.
