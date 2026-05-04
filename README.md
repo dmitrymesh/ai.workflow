@@ -160,6 +160,18 @@ python .ai-workflow/scripts/ai_task.py review AI-001 --approve
 python .ai-workflow/scripts/ai_task.py review AI-001 --changes-requested
 ```
 
+Reopen a `done` task for further changes (human pre-merge veto):
+
+```bash
+python .ai-workflow/scripts/ai_task.py human-request-changes AI-001 --feedback "Please address X before merge"
+```
+
+Migrate tasks from the legacy status-by-directory layout to the current flat layout:
+
+```bash
+python .ai-workflow/scripts/ai_task.py migrate
+```
+
 List tasks:
 
 ```bash
@@ -236,21 +248,20 @@ python .ai-workflow/scripts/ai_task.py link AI-022 blocked-by AI-021
 Task status is stored in `metadata.yaml.status`. Allowed statuses and transitions:
 
 ```text
-draft → ready
-ready → in_progress          (via claim)
-in_progress → ready_for_review   (via submit)
-ready_for_review → changes_requested
-ready_for_review → done          (via review --approve)
-changes_requested → ready_for_review  (via submit after fixes)
-any status → rejected
+draft              → ready, rejected
+ready              → in_progress (via claim), rejected
+in_progress        → ready_for_review (via submit), rejected
+ready_for_review   → changes_requested, done (via review --approve), rejected
+changes_requested  → ready_for_review (via submit after fixes), rejected
+done               → changes_requested (via human-request-changes)
 ```
 
 Executor agents move:
 
 ```text
-ready → in_progress          (claim)
-in_progress → ready_for_review   (submit)
-changes_requested → in_progress  (re-claim or manual move, then submit)
+ready → in_progress                       (claim)
+in_progress → ready_for_review            (submit)
+changes_requested → ready_for_review      (submit after addressing review feedback)
 ```
 
 Reviewer agents move:
