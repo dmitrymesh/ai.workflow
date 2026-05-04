@@ -39,3 +39,18 @@ criteria for approved parallel work.
 ## Known risks
 
 - None. All changes are documentation-only; no behavioral code was modified.
+
+## Review fix notes (round 2)
+
+One blocking issue: the worked example said "AI-012 and AI-013 can be executed
+in parallel — their write scopes are disjoint." This was wrong. AI-013's
+`task.md` explicitly says it is blocked by AI-012 because it must follow the
+approved workflow contract. Disjoint file scope is necessary but not sufficient;
+a semantic dependency (one task implements behavior the blocker defines) also
+requires serialization.
+
+Fixed:
+- Corrected the "Worked example — AI-011 chain" diagram and execution order to
+  show AI-013 blocked by AI-012 (starts after AI-012 merged), not parallel.
+- Added a "Note" bullet under point 3 of "Recommended execution order" making
+  the distinction between file-scope and semantic dependencies explicit.

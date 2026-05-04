@@ -484,9 +484,16 @@ order:
 3. **Avoid parallel execution when task outputs overlap.** Do not run a
    dependent task in parallel with its blocker when the blocker's output
    affects:
-   - Command names, flags, or CLI behavior that the dependent task documents.
+   - Command names, flags, or CLI behavior that the dependent task implements
+     or documents.
+   - Behavior or design decisions that the dependent task is built on top of.
    - Shared protocol files (`config.yaml`, role skills, `README.md`).
    - Any file both tasks need to write.
+
+   Note: disjoint file scope is a necessary but not sufficient condition for
+   parallel work. A semantic dependency — where one task implements behavior
+   specified by another — also requires serialization even if the changed
+   files do not overlap.
 
 > **Warning:** Claiming a `blocked_by` task before its blocker is merged means
 > the task branch starts from a `main` that does not yet include the blocker's
@@ -498,19 +505,23 @@ order:
 **Worked example — AI-011 chain:**
 
 ```
-AI-012 (design)   ──────────────────────> merge to main
-AI-013 (CLI)      ──────────────────────> merge to main
-                                               │
-                                        AI-014 starts (blocked_by AI-012, AI-013)
-AI-015 starts after AI-012 merged (blocked_by AI-012)
+AI-012 (design) ────────────────> merge to main
+                                        │
+                               AI-013 starts (blocked_by AI-012)
+                               AI-015 starts (blocked_by AI-012)
+                               AI-013 ──────────────> merge to main
+                                                           │
+                                                    AI-014 starts (blocked_by AI-012, AI-013)
 ```
 
 Correct order:
-1. AI-012 and AI-013 can be executed in parallel — their write scopes are
-   disjoint (AI-012 writes `README.md` + `config.yaml`; AI-013 writes
-   `_discovery.py` + `ai_task.py`).
-2. After both are merged to `main`, claim AI-014.
-3. AI-015 can be claimed after AI-012 is merged (independent of AI-013).
+1. Execute AI-012 first. AI-013's `task.md` says it implements the approved
+   AI-012 contract — disjoint file scope is not enough when the blocker
+   defines the behavior or command semantics the dependent task implements.
+2. After AI-012 is merged to `main`, claim AI-013 and AI-015 independently
+   (their write scopes do not overlap: AI-013 writes CLI scripts; AI-015
+   writes README.md documentation).
+3. After AI-012 and AI-013 are both merged to `main`, claim AI-014.
 
 ---
 

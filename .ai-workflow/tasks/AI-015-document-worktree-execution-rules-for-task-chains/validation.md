@@ -20,6 +20,16 @@ git diff --stat HEAD
 Result: Only `.ai-workflow/README.md` and task artifact metadata changed.
 No CLI scripts, no Unity files, no board.md. **Passed.**
 
+### AI-013 blocking relationship check (round 2)
+
+Verified AI-013 `task.md` notes: "Blocked by AI-012 because this task must
+follow the approved workflow contract." The worked example previously said
+AI-012 and AI-013 could run in parallel — this was incorrect.
+
+Fixed: example now shows AI-013 starting after AI-012 merged; the
+"Recommended execution order" section notes that semantic dependencies also
+require serialization even when file scopes are disjoint. **Corrected.**
+
 ### AI-012 consistency check
 
 Manual review of the new "Task chain execution rules" section against the
@@ -52,7 +62,8 @@ AI-012 branch-first contract (`## Branch-first workflow contract` in README.md):
       deliverables → no branch needed
 - [x] New user can determine correct execution order for AI-012–AI-015:
       "Worked example" under "Recommended execution order" shows the
-      parallel-then-serial ordering with rationale
+      correct serialized order (AI-012 → AI-013/AI-015 → AI-014) with
+      rationale including semantic dependencies (round 2 fix)
 - [x] Docs explicitly warn against starting a blocked task before its blocker
       is merged (Warning block in "Recommended execution order")
 - [x] No implementation files changed (diff scope check passed)
