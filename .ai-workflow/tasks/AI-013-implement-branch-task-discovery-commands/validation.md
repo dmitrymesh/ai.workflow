@@ -12,53 +12,54 @@ python .ai-workflow/scripts/ai_task.py validate
 ```
 Result: **Validation passed.**
 
-### list-branches — valid task branch (flat layout)
+### list-branches — valid task branch (flat layout, AI-012)
 
 ```
 python .ai-workflow/scripts/ai_task.py list-branches
 ```
-Result: Listed 5 local branches. AI-009, AI-010, AI-012, AI-013 (flat layout)
-showed full metadata. AI-008 (legacy layout) also showed full metadata after
-legacy subdirectory support was added.
+Result: Lists all local `ai/*` branches, showing full metadata for each.
+AI-012 (flat layout, done), AI-008 (legacy status-subdir layout), AI-009,
+AI-010 all show correct id/status/title/parent/blocked_by. **Passed.**
 
-Sample output:
+### list-branches — branch without valid task metadata
+
+Smoke fixture: created a local branch `ai/AI-099-smoke-no-task-metadata`
+(no `AI-099` task folder exists in `.ai-workflow/tasks/`), then ran
+`list-branches`, then deleted the branch.
+
 ```
-Task branches (branch-first discovery)
-============================================================
-scope=local  prefix=ai/
+git branch ai/AI-099-smoke-no-task-metadata
+python .ai-workflow/scripts/ai_task.py list-branches
+git branch -d ai/AI-099-smoke-no-task-metadata
+```
 
+Output excerpt:
+```
 Active (unmerged)
 -----------------
-  (none)
-
-Merged into main
-----------------
-  ai/AI-008-add-executor-review-appeal-step
-    id=AI-008  status=ready_for_review  title=Add executor review appeal step
-    parent=-  blocked_by=-  pr=-
-  ai/AI-012-design-branch-first-task-workflow-contract
-    id=AI-012  status=done  title=Design branch-first task workflow contract
-    parent=AI-011  blocked_by=-  pr=-
-  ...
+  ai/AI-099-smoke-no-task-metadata
+    (no valid task metadata — skipped)
 ```
+
+Branch was discovered, reported cleanly without crashing, and discovery
+continued to the remaining branches. **Passed.**
 
 ### show-branch — valid task branch
 
 ```
 python .ai-workflow/scripts/ai_task.py show-branch AI-012
 ```
-Result: Full metadata shown (id, title, status, risk, area, parent, blocked_by, pr,
-task branch). **Passed.**
+Result: Full metadata shown (id, title, status, risk, area, parent, blocked_by,
+pr, task branch). **Passed.**
 
-### show-branch — legacy layout
+### show-branch — legacy layout (AI-008)
 
 ```
 python .ai-workflow/scripts/ai_task.py show-branch AI-008
 ```
-Result: Full metadata shown for the AI-008 branch (legacy status-subdir layout).
-**Passed.**
+Result: Full metadata shown for AI-008 (legacy status-subdir layout). **Passed.**
 
-### show-branch — non-existent task ID (no valid metadata branch)
+### show-branch — non-existent task ID
 
 ```
 python .ai-workflow/scripts/ai_task.py show-branch AI-999
@@ -66,12 +67,27 @@ python .ai-workflow/scripts/ai_task.py show-branch AI-999
 Result: `No task branch found for AI-999 (scope=local, prefix=ai/).` — clean
 message, no crash. **Passed.**
 
+Note: this tests "no branch found for the given task ID", not "branch exists but
+has no task metadata". That scenario is covered by the `ai/AI-099-smoke-no-task-metadata`
+test under `list-branches` above.
+
 ### Regression: existing list command
 
 ```
 python .ai-workflow/scripts/ai_task.py list
 ```
-Result: Existing behavior unchanged. All tasks listed by status. **Passed.**
+Result: Existing behavior unchanged — all tasks listed by status. **Passed.**
+
+## Acceptance criteria coverage
+
+- [x] A command lists active task metadata from task branches — `list-branches`
+- [x] Output shows enough info to choose a task branch/worktree — id, status,
+      title, parent, blocked_by, pr shown per branch
+- [x] Invalid/non-task `ai/*` branches skipped cleanly — `ai/AI-099-smoke-no-task-metadata`
+      test demonstrates graceful skip with no crash
+- [x] Valid task branch with metadata — AI-012 (flat), AI-008 (legacy)
+- [x] Branch without valid task metadata handled — `ai/AI-099-smoke-no-task-metadata`
+- [x] Existing `list` behavior not regressed
 
 ## Human review
 
@@ -83,14 +99,3 @@ Result: Existing behavior unchanged. All tasks listed by status. **Passed.**
 - Forbidden files changed: no forbidden files were changed (only scripts/ and
   task artifacts)
 - Package changes: none
-
-## Notes
-
-- No unit test framework exists for the scripts. Validation is smoke-based.
-- Acceptance criteria coverage:
-  - [x] Command lists active task metadata from task branches
-  - [x] Output sufficient for executor/reviewer to choose a task branch
-  - [x] Invalid/non-task branches skipped cleanly (AI-999 test)
-  - [x] Valid task branch with metadata (AI-012)
-  - [x] Branch without valid metadata handled (AI-999 non-existent)
-  - [x] Existing `list` behavior not regressed

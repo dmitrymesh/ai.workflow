@@ -1,6 +1,6 @@
 id: "AI-013"
 title: "Implement branch task discovery commands"
-status: "in_progress"
+status: "ready_for_review"
 risk: "high"
 area:
   - workflow

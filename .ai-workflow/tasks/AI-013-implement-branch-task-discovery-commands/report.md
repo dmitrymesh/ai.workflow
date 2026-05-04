@@ -19,9 +19,13 @@ gracefully without crashing.
 - `.ai-workflow/tasks/AI-012-design-branch-first-task-workflow-contract/metadata.yaml`
   — removed AI-013 from `blocks` (blocker relationship cleared; AI-012 is done)
 - `.ai-workflow/tasks/AI-013-implement-branch-task-discovery-commands/metadata.yaml`
-  — status → in_progress, branch set, blocked_by cleared
+  — status, branch, blocked_by fields (managed by claim/submit workflow)
 - `.ai-workflow/tasks/AI-013-implement-branch-task-discovery-commands/task.md`
   — copied from main checkout by claim
+- `.ai-workflow/tasks/AI-013-implement-branch-task-discovery-commands/report.md`
+  — this file
+- `.ai-workflow/tasks/AI-013-implement-branch-task-discovery-commands/validation.md`
+  — updated with full smoke coverage including branch-without-metadata test
 
 ## Implementation notes
 
@@ -33,8 +37,8 @@ Scans local and/or remote branches (per `workflow.discovery.scope`) matching
 - Distinguishes merged (via `git branch --merged main`) from active.
 - Handles legacy status-subdirectory layout by recursing one level when a
   top-level task directory name is a known status name (`done`, `ready`, etc.).
-- Reports "no valid task metadata" for branches where metadata cannot be found,
-  then continues without terminating discovery.
+- Reports "no valid task metadata — skipped" for branches where metadata cannot
+  be found, then continues without terminating discovery.
 
 ### `show-branch AI-NNN`
 
@@ -53,15 +57,17 @@ in `ai_task.py`.
 ## Validation performed
 
 - `python .ai-workflow/scripts/ai_task.py validate` — passed
-- `python .ai-workflow/scripts/ai_task.py list-branches` — lists 5 local task
-  branches, showing full metadata for each (flat and legacy layouts both work)
-- `python .ai-workflow/scripts/ai_task.py show-branch AI-012` — full metadata
-  for AI-012 shown correctly
-- `python .ai-workflow/scripts/ai_task.py show-branch AI-008` — full metadata
-  for AI-008 shown correctly (legacy layout)
-- `python .ai-workflow/scripts/ai_task.py show-branch AI-999` — prints clean
-  "No task branch found" message, no crash
+- `python .ai-workflow/scripts/ai_task.py list-branches` — full metadata shown
+  for all branches; flat layout (AI-012), legacy layout (AI-008), active vs merged
+  classification all correct
+- Smoke: created `ai/AI-099-smoke-no-task-metadata` branch (no matching task
+  folder), ran `list-branches` — showed "no valid task metadata — skipped"
+  without crash; deleted temp branch
+- `python .ai-workflow/scripts/ai_task.py show-branch AI-012` — full metadata shown
+- `python .ai-workflow/scripts/ai_task.py show-branch AI-008` — legacy layout works
+- `python .ai-workflow/scripts/ai_task.py show-branch AI-999` — clean "not found" message
 - `python .ai-workflow/scripts/ai_task.py list` — existing behavior unchanged
+- See `validation.md` for full output and acceptance criteria coverage
 
 ## Assumptions
 
@@ -70,11 +76,10 @@ in `ai_task.py`.
 - The `workflow.mode` config key is not checked at runtime; both `main_first`
   and `branch_first` projects benefit from these commands.
 - `git branch --merged main` is used for merge detection; if the default branch
-  is not named `main`, the "merged" flag will be inaccurate but discovery will
-  still work (branches appear in "Active" instead of "Merged").
-- The AI-013 branch itself appears in "Merged" in list output before any commits
-  are added (branch tip equals main's HEAD). Once implementation commits exist,
-  it will correctly appear as "Active".
+  is not named `main`, branches may be misclassified but discovery still works.
+- All task artifact changes (metadata.yaml, report.md, validation.md) are committed
+  to the task branch before submission so the committed branch state is the
+  authoritative source of review-ready status.
 
 ## Known risks
 
