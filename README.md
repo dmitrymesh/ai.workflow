@@ -25,26 +25,18 @@ Any compatible LLM or agent runtime can fill any role. Edit the `agents:` block 
 
 ## Core idea
 
-Each task is a folder.
-
-The folder moves between status directories:
+Each task is a stable folder under `.ai-workflow/tasks/`:
 
 ```text
-.ai-workflow/tasks/draft/
-.ai-workflow/tasks/ready/
-.ai-workflow/tasks/in_progress/
-.ai-workflow/tasks/ready_for_review/
-.ai-workflow/tasks/changes_requested/
-.ai-workflow/tasks/ready_for_human/
-.ai-workflow/tasks/done/
-.ai-workflow/tasks/rejected/
+.ai-workflow/tasks/<task-id>-<slug>/
 ```
 
-A task folder contains its own contract and artifacts:
+Task status is stored in `metadata.yaml` — the folder path never changes:
 
 ```text
-AI-001-example-task/
-  metadata.yaml
+.ai-workflow/tasks/AI-001-example-task/
+  metadata.yaml    ← status: draft | ready | in_progress | ready_for_review |
+                              changes_requested | done | rejected
   task.md
   report.md
   review.md
@@ -52,9 +44,7 @@ AI-001-example-task/
   validation.md
 ```
 
-The task status is determined by its directory. `metadata.yaml` also stores the status so the CLI can validate consistency.
-
-`board.md` is generated from the current task folders. It should not be edited manually.
+`board.md` is generated from the current task folders and is gitignored — it is a local view cache only. Do not edit it manually.
 
 ## Installation into a project
 
@@ -131,7 +121,7 @@ task data is never deleted or overwritten.
 |------|-------|-------------------|
 | `.ai-workflow/` (excl. `tasks/`, `board.md`) | Protocol | CREATE / UPDATE with `--apply` |
 | `.ai-workflow/tasks/` | Project | Never touched |
-| `.ai-workflow/board.md` | Generated | Never touched |
+| `.ai-workflow/board.md` | Generated (untracked) | Never touched |
 | `AGENTS.md` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
 | `CLAUDE.md` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
 | `.claude/commands/*` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
@@ -149,7 +139,37 @@ Move a task:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py move AI-001 ready
-python .ai-workflow/scripts/ai_task.py move AI-001 in_progress
+```
+
+Claim a ready task (executor self-service — creates worktree, moves to `in_progress`):
+
+```bash
+python .ai-workflow/scripts/ai_task.py claim AI-001
+```
+
+Submit a completed task for review:
+
+```bash
+python .ai-workflow/scripts/ai_task.py submit AI-001
+```
+
+Review a submitted task:
+
+```bash
+python .ai-workflow/scripts/ai_task.py review AI-001 --approve
+python .ai-workflow/scripts/ai_task.py review AI-001 --changes-requested
+```
+
+Reopen a `done` task for further changes (human pre-merge veto):
+
+```bash
+python .ai-workflow/scripts/ai_task.py human-request-changes AI-001 --feedback "Please address X before merge"
+```
+
+Migrate tasks from the legacy status-by-directory layout to the current flat layout:
+
+```bash
+python .ai-workflow/scripts/ai_task.py migrate
 ```
 
 List tasks:
@@ -208,59 +228,56 @@ Use `link` / `unlink` instead of editing YAML by hand — the CLI keeps both sid
 Parent/child example — split a broad request into a parent and two children:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py create "Add reward preview"            # AI-010
-python .ai-workflow/scripts/ai_task.py create "Reward preview: service"       # AI-011
-python .ai-workflow/scripts/ai_task.py create "Reward preview: UI binding"    # AI-012
-python .ai-workflow/scripts/ai_task.py link AI-011 parent AI-010
-python .ai-workflow/scripts/ai_task.py link AI-012 parent AI-010
+python .ai-workflow/scripts/ai_task.py create "Add reward preview"            # AI-020
+python .ai-workflow/scripts/ai_task.py create "Reward preview: service"       # AI-021
+python .ai-workflow/scripts/ai_task.py create "Reward preview: UI binding"    # AI-022
+python .ai-workflow/scripts/ai_task.py link AI-021 parent AI-020
+python .ai-workflow/scripts/ai_task.py link AI-022 parent AI-020
 ```
 
 Blocking example — UI binding cannot start until the service ships:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py link AI-012 blocked-by AI-011
+python .ai-workflow/scripts/ai_task.py link AI-022 blocked-by AI-021
 ```
 
 `validate` will fail with a clear message if a relationship references a missing task id or if `parent`/`children` or `blocks`/`blocked_by` are not reciprocal. `board` and `list` show `Parent` and `Blocked By` columns so blocked tasks are easy to spot.
 
 ## Status lifecycle
 
-Default allowed transitions:
+Task status is stored in `metadata.yaml.status`. Allowed statuses and transitions:
 
 ```text
-draft → ready
-ready → in_progress
-in_progress → ready_for_review
-ready_for_review → changes_requested
-changes_requested → in_progress
-ready_for_review → ready_for_human
-ready_for_human → done
-any status → rejected
+draft              → ready, rejected
+ready              → in_progress (via claim), rejected
+in_progress        → ready_for_review (via submit), rejected
+ready_for_review   → changes_requested, done (via review --approve), rejected
+changes_requested  → ready_for_review (via submit after fixes), rejected
+done               → changes_requested (via human-request-changes)
 ```
 
-Executor agents may usually move:
+Executor agents move:
 
 ```text
-ready → in_progress
-in_progress → ready_for_review
-changes_requested → in_progress
+ready → in_progress                       (claim)
+in_progress → ready_for_review            (submit)
+changes_requested → ready_for_review      (submit after addressing review feedback)
 ```
 
-Reviewer agents may usually move:
+Reviewer agents move:
 
 ```text
-ready_for_review → changes_requested
-ready_for_review → ready_for_human
+ready_for_review → changes_requested   (review --changes-requested)
+ready_for_review → done                (review --approve)
 ```
 
 Only a human should move:
 
 ```text
 draft → ready
-ready_for_human → done
 ```
 
-The executor should not mark tasks as `done`.
+The executor must not mark tasks as `done`.
 
 ## Recommended workflow
 
@@ -301,25 +318,22 @@ Only a human should perform this step.
 
 ### 3. Executor implements
 
-The executor agent (configured in `.ai-workflow/config.yaml` under `agents.executor` — default: Claude Code) reads:
+The executor agent (configured in `.ai-workflow/config.yaml` under `agents.executor` — default: Claude Code) reads `.ai-workflow/skills/executor.md` and the task folder, then claims the task from the main checkout:
 
-```text
-.ai-workflow/skills/executor.md
-.ai-workflow/tasks/ready/<task-id>/task.md
+```bash
+python .ai-workflow/scripts/ai_task.py claim AI-001
 ```
 
-Then it implements the task and writes:
+`claim` creates an isolated git worktree on a task branch (`ai/<task-id>-<slug>`),
+copies the approved task folder into the worktree, and moves the task to `in_progress`.
+The executor implements the task inside the worktree, writes `report.md` and
+`validation.md`, then submits:
 
-```text
-report.md
-validation.md
+```bash
+python .ai-workflow/scripts/ai_task.py submit AI-001
 ```
 
-After implementation it moves the task to:
-
-```text
-ready_for_review
-```
+All commits go on the task branch; do not push to `main`.
 
 ### 4. Reviewer checks result
 
@@ -328,7 +342,7 @@ The reviewer agent (configured in `.ai-workflow/config.yaml` under `agents.revie
 ```text
 task.md
 report.md
-git diff
+git diff main...ai/<task-id>-<slug>
 reviewer.md skill
 ```
 
@@ -347,26 +361,25 @@ changes_requested
 reject
 ```
 
-If approved, task moves to:
+If approved, task moves to `done`:
 
-```text
-ready_for_human
+```bash
+python .ai-workflow/scripts/ai_task.py review AI-001 --approve
 ```
 
-If changes are needed, task moves to:
+If changes are needed:
 
-```text
-changes_requested
+```bash
+python .ai-workflow/scripts/ai_task.py review AI-001 --changes-requested
 ```
 
-### 5. Human validates
+### 5. Human merges
 
-A human runs the final checks.
+Once a task is `done`, a human reviews the task branch and merges it to `main`. After merge, clean up:
 
-If everything is accepted:
-
-```text
-ready_for_human → done
+```bash
+git worktree remove ../<repo>.worktrees/AI-001-<slug>
+git branch -d ai/AI-001-<slug>
 ```
 
 ## Unity profile
@@ -405,29 +418,29 @@ Defines statuses, allowed transitions, profile, agent role mapping, and forbidde
 
 ### `.ai-workflow/board.md`
 
-Generated board. Do not edit manually.
+Generated board. Do not edit manually. Gitignored — local view only.
 
-### `.ai-workflow/tasks/<status>/<task>/metadata.yaml`
+### `.ai-workflow/tasks/<task-id>-<slug>/metadata.yaml`
 
-Machine-readable task metadata, including relationship fields (`parent`, `children`, `blocks`, `blocked_by`, `related`).
+Machine-readable task metadata. `status` field is the source of truth for task state. Also stores relationship fields (`parent`, `children`, `blocks`, `blocked_by`, `related`) and the task branch name.
 
-### `.ai-workflow/tasks/<status>/<task>/task.md`
+### `.ai-workflow/tasks/<task-id>-<slug>/task.md`
 
 Task contract. This is the main source of truth for an AI executor.
 
-### `.ai-workflow/tasks/<status>/<task>/report.md`
+### `.ai-workflow/tasks/<task-id>-<slug>/report.md`
 
 Executor report.
 
-### `.ai-workflow/tasks/<status>/<task>/review.md`
+### `.ai-workflow/tasks/<task-id>-<slug>/review.md`
 
 Reviewer output.
 
-### `.ai-workflow/tasks/<status>/<task>/decision.yaml`
+### `.ai-workflow/tasks/<task-id>-<slug>/decision.yaml`
 
 Machine-readable review decision.
 
-### `.ai-workflow/tasks/<status>/<task>/validation.md`
+### `.ai-workflow/tasks/<task-id>-<slug>/validation.md`
 
 Manual or automated validation result.
 
@@ -470,8 +483,10 @@ Rules:
 - Do not expand scope.
 - Before editing, list planned files.
 - Do not modify forbidden Unity files unless task.md explicitly allows it.
+- Run: python .ai-workflow/scripts/ai_task.py claim AI-001
+- Work inside the printed worktree path. Verify the branch matches metadata.yaml.branch.
 - Write report.md and validation.md.
-- Move the task to ready_for_review when finished.
+- Run: python .ai-workflow/scripts/ai_task.py submit AI-001
 ```
 
 ## Example reviewer prompt (default tool: Codex — adapt using config.yaml)
@@ -486,7 +501,7 @@ Review task AI-001.
 Inputs:
 - task.md
 - report.md
-- git diff
+- git diff main...ai/AI-001-<slug>
 - validation.md
 
 Return a decision:
@@ -495,6 +510,8 @@ Return a decision:
 - reject
 
 Write review.md and decision.yaml.
+Run: python .ai-workflow/scripts/ai_task.py review AI-001 --approve
+  or python .ai-workflow/scripts/ai_task.py review AI-001 --changes-requested
 ```
 
 ## Design constraints
