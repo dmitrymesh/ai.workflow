@@ -441,3 +441,244 @@ git branch -d ai/AI-003-add-git-worktree-execution-workflow
 ```
 
 For rejected tasks, use `git branch -D` (force delete) if the branch was never merged.
+
+---
+
+## Branch-first workflow contract
+
+This section defines the contract for a branch-first task workflow. It is a
+design document that describes intended future behavior. Implementation lives
+in later tasks (AI-013, AI-014, AI-015). The `config.yaml` fields defined here
+are accepted by the schema but not yet enforced by the CLI unless noted.
+
+### Motivation: four problems from the main-first model
+
+The current `main_first` model creates tasks in `main` and later modifies the
+same task folder in task branches. Four recurring problems were observed:
+
+| # | Problem | Root cause |
+|---|---------|-----------|
+| 1 | Merge conflicts on task folders | Manager creates task in `main`; executor edits the same folder in a branch; divergent history causes conflicts on integration. |
+| 2 | No integration path modeled | Integration relies on manual local merge in a git client; no PR or local CLI mode is first-class. |
+| 3 | Uncommitted reviewer artifacts | Reviewer runs `review --approve` locally in the worktree without committing `review.md`/`decision.yaml` to the task branch; executor receives no artifact on handoff. |
+| 4 | Missed ready-state refresh | Human moves a task from `draft` to `ready` in `main`; executor in a separate worktree cannot see the change until they explicitly refresh `main`. |
+
+The branch-first model eliminates all four problems:
+
+| # | Solution |
+|---|---------|
+| 1 | Tasks are created in their own branch from the start; `main` never contains a task folder that will also be modified in a branch. |
+| 2 | The `workflow.integration.mode` config key makes the integration path explicit and machine-readable. |
+| 3 | The contract mandates that every actor commits artifacts to the task branch before handing off. |
+| 4 | Executors discover `ready` tasks by scanning task branches, not by reading `main`. |
+
+---
+
+### Source of truth
+
+| Scope | Source of truth |
+|-------|----------------|
+| **Active tasks** (`draft` → `ready` → `in_progress` → `ready_for_review` → `changes_requested`) | The task branch (`ai/<task-id>-<slug>`). All task artifacts live here. |
+| **Completed / rejected task history** (`done`, `rejected`) | `main`. After a branch is integrated, its task folder is the permanent record. |
+| **Board / active task list** | Assembled at query time by scanning unmerged task branches (local and/or remote, per `workflow.discovery.scope`). |
+
+`main` in a branch-first project is a read-only history of accepted work. It
+receives task folders only when their branches are merged (or squash-merged).
+
+---
+
+### Lifecycle
+
+Each step below represents a mandatory commit to the task branch.
+
+```
+[main] manager creates task branch ai/AI-NNN-slug
+           ↓
+       manager commits task.md + metadata.yaml (status: draft)
+           ↓
+[human] reviews task.md; runs: move AI-NNN ready
+           ↓
+       commit: metadata.yaml (status: ready)
+           ↓
+[executor] claims task (worktree already on branch), runs: claim AI-NNN
+           ↓
+       commit: metadata.yaml (status: in_progress, branch: ...)
+           ↓
+[executor] implements task, writes report.md + validation.md
+           ↓
+       commit: implementation + report.md + validation.md
+           ↓
+[executor] runs: submit AI-NNN
+           ↓
+       commit: metadata.yaml (status: ready_for_review)
+           ↓
+[reviewer] reviews diff on branch; runs: review AI-NNN --approve
+           OR
+           runs: review AI-NNN --changes-requested
+           ↓
+       commit: review.md + decision.yaml + metadata.yaml (status: done | changes_requested)
+           ↓
+[human] integrates branch into main via local merge or PR
+           ↓
+[main] task folder at done/rejected status is permanent history
+```
+
+**Commit discipline:** every actor must commit their artifact changes before
+handing off to the next actor. A `status` transition without a corresponding
+commit is a protocol violation. This eliminates the "uncommitted reviewer
+artifact" problem.
+
+---
+
+### Manager: creating a task in branch-first mode
+
+When `workflow.mode = branch_first`:
+
+1. The manager creates a task branch from `main`: `git checkout -b ai/AI-NNN-slug`.
+2. The manager creates the task folder (`task.md`, `metadata.yaml` with `status: draft`) in that branch and commits it.
+3. The task branch is pushed to the remote (if `integration.mode = pull_request`) or left local (if `local_merge`).
+4. The manager does **not** commit the task folder to `main`.
+
+#### Task ID uniqueness strategy
+
+Active tasks are no longer guaranteed to exist in `main`, so a sequential scan
+of `main` alone cannot determine the next safe ID. The `workflow.task_ids.strategy`
+config key selects one of two approaches:
+
+| Strategy | Behavior | Tradeoffs |
+|----------|----------|-----------|
+| `central_counter` | A counter file (`.ai-workflow/task_id_counter`) in `main` is incremented atomically before creating the task branch. | Requires one commit to `main` per task creation. Simple and collision-free without network access. |
+| `branch_scan` | The CLI scans local and remote branches for the highest existing task ID and increments it. | No `main` commit needed. Requires network access for remote scan. Race condition if two managers create branches simultaneously without coordinating. |
+
+Default: `central_counter`. Recommended for teams; `branch_scan` is acceptable
+for single-author projects.
+
+---
+
+### Executor: discovering ready tasks
+
+When `workflow.mode = branch_first`, executors must not rely on `main` to find
+`ready` tasks. Instead they use discovery commands that scan branches:
+
+```bash
+# List all active task branches (future CLI — AI-013)
+python .ai-workflow/scripts/ai_task.py list-branches
+
+# Show status of a specific branch without switching to it
+python .ai-workflow/scripts/ai_task.py show-branch AI-NNN
+```
+
+Discovery is configured by `workflow.discovery`:
+
+| Field | Meaning |
+|-------|---------|
+| `scope: local` | Only local branches are scanned. Works offline. |
+| `scope: remote` | Only the configured remote is scanned (requires fetch). |
+| `scope: both` | Union of local and remote branches. |
+| `remote` | Git remote name (default: `origin`). |
+| `branch_prefix` | Branch prefix used to filter task branches (default: `ai/`). |
+
+The ready-state visibility problem is eliminated: the executor reads `metadata.yaml`
+directly from the task branch, which is authoritative. No `main` refresh is required.
+
+---
+
+### Reviewer: committing artifacts to the task branch
+
+In the branch-first model, the reviewer **must** commit `review.md`,
+`decision.yaml`, and the updated `metadata.yaml` to the task branch before the
+task can be integrated:
+
+```bash
+# Reviewer is on the task branch (worktree or checkout):
+python .ai-workflow/scripts/ai_task.py review AI-NNN --approve
+# review command writes + commits review.md, decision.yaml, metadata.yaml
+```
+
+The `review` command must ensure a commit is made. A dry-run or local-only
+write is a protocol violation. This addresses the "uncommitted reviewer
+artifacts" problem.
+
+After the reviewer commits, the task branch contains the complete history:
+task contract → executor implementation → reviewer decision. This is the
+unit that gets integrated into `main`.
+
+---
+
+### Integration modes
+
+The `workflow.integration.mode` config key selects how a completed task branch
+is merged into `main`.
+
+#### `local_merge`
+
+The human (or a future CLI command) merges the branch locally:
+
+```bash
+git checkout main
+git merge --no-ff ai/AI-NNN-slug -m "Merge AI-NNN: <title>"
+git push origin main
+
+# Then clean up:
+git branch -d ai/AI-NNN-slug
+git push origin --delete ai/AI-NNN-slug  # if remote branch exists
+```
+
+This mode works with any git host and requires no API credentials. It is the
+default and the recommended mode for local-only or self-hosted projects.
+
+#### `pull_request`
+
+A hosted PR is opened against `main`. The PR is reviewed and merged through
+the hosting platform's UI. The `workflow.integration.provider` key selects
+the provider (`github`, `gitlab`, `gitea`).
+
+Future CLI support (AI-014) will include:
+
+```bash
+# Open a PR for the task branch (future CLI — AI-014)
+python .ai-workflow/scripts/ai_task.py open-pr AI-NNN
+```
+
+Until AI-014 is implemented, the human opens the PR manually using the hosting
+platform UI or the provider CLI (`gh pr create`, `glab mr create`, etc.).
+
+Both modes preserve portability: a project can switch between `local_merge` and
+`pull_request` by changing one config key, without altering task data or protocol files.
+
+---
+
+### Config keys reference
+
+All keys live under `workflow:` in `.ai-workflow/config.yaml`.
+
+| Key | Values | Default | Purpose |
+|-----|--------|---------|---------|
+| `workflow.mode` | `main_first` / `branch_first` | `main_first` | Selects the overall task workflow model. |
+| `workflow.integration.mode` | `local_merge` / `pull_request` | `local_merge` | How completed branches are integrated into `main`. |
+| `workflow.integration.provider` | `github` / `gitlab` / `gitea` / `null` | `null` | Hosting provider for PR-based integration. Required when `integration.mode = pull_request`. |
+| `workflow.discovery.scope` | `local` / `remote` / `both` | `local` | Where the CLI looks for active task branches. |
+| `workflow.discovery.remote` | any git remote name | `origin` | Remote used when `discovery.scope` is `remote` or `both`. |
+| `workflow.discovery.branch_prefix` | any string | `ai/` | Branch name prefix for task branches. |
+| `workflow.task_ids.strategy` | `central_counter` / `branch_scan` | `central_counter` | How unique task IDs are generated in branch-first mode. |
+
+---
+
+### Backward compatibility
+
+- Projects that do not set `workflow.mode` (or set it to `main_first`) continue
+  to use the existing behavior. No migration is required.
+- Completed task history (`status: done`) already in `main` is preserved and
+  readable by all CLI commands regardless of mode.
+- The `claim`, `submit`, and `review` commands work the same way in both modes;
+  only discovery and integration differ.
+
+---
+
+### Future work (not in this task)
+
+| Task | Scope |
+|------|-------|
+| AI-013 | Implement `list-branches` and `show-branch` CLI commands for branch discovery. |
+| AI-014 | Implement `open-pr` CLI command for hosted PR integration. |
+| AI-015 | Update role skill files and agent adapter docs for branch-first mode. |

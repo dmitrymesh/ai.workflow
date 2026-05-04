@@ -60,3 +60,48 @@ forbidden_file_patterns:
 
 board:
   generated_file: .ai-workflow/board.md
+
+# Branch-first workflow settings.
+# See .ai-workflow/README.md § "Branch-first workflow contract" for full semantics.
+workflow:
+  # "main_first"   — legacy: tasks are created and tracked in main (current default).
+  # "branch_first" — tasks live in task branches; main receives only merged history.
+  mode: main_first
+
+  integration:
+    # How completed task branches are integrated into main.
+    # "local_merge"  — a human (or future CLI) merges the branch locally with a git client.
+    # "pull_request" — a hosted PR is opened; integration happens through the PR review UI.
+    mode: local_merge
+
+    # Required when integration.mode = "pull_request".
+    # "github"  — use the GitHub API / gh CLI.
+    # "gitlab"  — use the GitLab API / glab CLI.
+    # "gitea"   — use the Gitea API.
+    # null      — no hosted provider; falls back to local_merge behaviour.
+    provider: null
+
+  discovery:
+    # Where the CLI looks for active (non-merged) task branches.
+    # "local"   — scan local git branches (default; works offline).
+    # "remote"  — fetch and scan the configured git remote.
+    # "both"    — union of local and remote branches.
+    scope: local
+
+    # Git remote name used when scope is "remote" or "both".
+    remote: origin
+
+    # Branch prefix for task branches.  Must match the naming convention in
+    # executor.md ("ai/<task-id>-<slug>").  CLI commands filter branches by
+    # this prefix when scanning for active tasks.
+    branch_prefix: "ai/"
+
+  task_ids:
+    # Strategy for generating unique task ids when tasks are created outside main.
+    # "central_counter" — a single counter file (.ai-workflow/task_id_counter) in
+    #                     main is incremented by the manager; requires a commit to
+    #                     main before creating the task branch.
+    # "branch_scan"     — the CLI scans all branches (local + remote) to find the
+    #                     highest existing id and increments it; no main commit needed
+    #                     but requires network access when remote branches exist.
+    strategy: central_counter

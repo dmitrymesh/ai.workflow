@@ -1,6 +1,6 @@
 id: "AI-012"
 title: "Design branch-first task workflow contract"
-status: "ready"
+status: "in_progress"
 risk: "medium"
 area:
   - workflow
@@ -8,7 +8,7 @@ area:
   - docs
 owner: null
 reviewer: null
-branch: null
+branch: "ai/AI-012-design-branch-first-task-workflow-contract"
 pr: null
 external_tracker: null
 parent: "AI-011"
@@ -20,4 +20,4 @@ blocks:
 blocked_by: []
 related: []
 created_at: "2026-05-04"
-updated_at: "2026-05-04"
+updated_at: "2026-05-05"
