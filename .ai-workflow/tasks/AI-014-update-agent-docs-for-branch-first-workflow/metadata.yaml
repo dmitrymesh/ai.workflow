@@ -1,6 +1,6 @@
 id: "AI-014"
 title: "Update agent docs for branch-first workflow"
-status: "changes_requested"
+status: "ready_for_review"
 risk: "medium"
 area:
   - workflow
