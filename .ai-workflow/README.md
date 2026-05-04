@@ -444,6 +444,92 @@ For rejected tasks, use `git branch -D` (force delete) if the branch was never m
 
 ---
 
+## Task chain execution rules
+
+### Parent tasks as coordination artifacts
+
+A parent task groups related child tasks. Unless the parent's `task.md`
+specifies concrete deliverables (code, config, or doc changes), it does not
+need its own branch or worktree. Its purpose is to define scope, link
+children via the `children:` field in `metadata.yaml`, and act as the stable
+anchor for the chain.
+
+**One executable child task = one branch/worktree.** Every child task with
+concrete deliverables gets its own task branch (`ai/<task-id>-<slug>`) and
+isolated worktree. Child tasks are not bundled into a shared branch.
+
+**Example — AI-011 umbrella with four children:**
+
+| Task | Concrete deliverables? | Branch needed? |
+|------|----------------------|----------------|
+| AI-011 | No (umbrella scope) | No |
+| AI-012 | Yes (design doc, config) | Yes |
+| AI-013 | Yes (CLI implementation) | Yes |
+| AI-014 | Yes (docs update) | Yes |
+| AI-015 | Yes (this doc) | Yes |
+
+---
+
+### Recommended execution order for blocked chains
+
+When tasks are connected by `blocks` / `blocked_by` relationships, follow this
+order:
+
+1. **Merge the blocker first.** Approve, claim, execute, review, and merge the
+   blocking task before claiming the dependent task.
+2. **Start the dependent task from updated `main`.** After the blocker is
+   merged, fetch/pull `main` before claiming the dependent task. This ensures
+   the dependent task branch starts from a state that includes all blocker
+   changes.
+3. **Avoid parallel execution when task outputs overlap.** Do not run a
+   dependent task in parallel with its blocker when the blocker's output
+   affects:
+   - Command names, flags, or CLI behavior that the dependent task documents.
+   - Shared protocol files (`config.yaml`, role skills, `README.md`).
+   - Any file both tasks need to write.
+
+> **Warning:** Claiming a `blocked_by` task before its blocker is merged means
+> the task branch starts from a `main` that does not yet include the blocker's
+> changes. This leads to stale assumptions (the docs describe commands or
+> behavior that changed during implementation) and merge conflicts when the
+> blocker is eventually integrated. Do not start a blocked task early unless
+> explicitly approved for parallel work with a defined merge strategy.
+
+**Worked example — AI-011 chain:**
+
+```
+AI-012 (design)   ──────────────────────> merge to main
+AI-013 (CLI)      ──────────────────────> merge to main
+                                               │
+                                        AI-014 starts (blocked_by AI-012, AI-013)
+AI-015 starts after AI-012 merged (blocked_by AI-012)
+```
+
+Correct order:
+1. AI-012 and AI-013 can be executed in parallel — their write scopes are
+   disjoint (AI-012 writes `README.md` + `config.yaml`; AI-013 writes
+   `_discovery.py` + `ai_task.py`).
+2. After both are merged to `main`, claim AI-014.
+3. AI-015 can be claimed after AI-012 is merged (independent of AI-013).
+
+---
+
+### Exception: approved parallel work
+
+Parallel execution of blocked tasks is safe only when **all** of the following
+hold:
+
+- The two tasks have **disjoint write scopes** — no file written by task A is
+  also written by task B.
+- A **merge strategy** for combining both branches is agreed in advance (e.g.,
+  one branch is rebased onto the other after both are approved, or a third
+  integration task is created).
+- The parallel work was **explicitly approved** in `task.md` or by a human.
+
+If any condition is in doubt, serialize.
+
+---
+
 ## Branch-first workflow contract
 
 This section defines the contract for a branch-first task workflow. It is a
