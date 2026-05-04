@@ -1,13 +1,13 @@
 id: "AI-015"
 title: "Document worktree execution rules for task chains"
-status: "ready"
+status: "ready_for_review"
 risk: "low"
 area:
   - workflow
   - docs
 owner: null
 reviewer: null
-branch: null
+branch: "ai/AI-015-document-worktree-execution-rules-for-task-chains"
 pr: null
 external_tracker: null
 parent: "AI-011"
