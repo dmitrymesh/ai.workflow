@@ -29,6 +29,21 @@ Searched updated docs for `tasks/<status>/` paths:
 - `executor.md`, `manager.md`, `reviewer.md`: no stale paths — **clean**
 - `CLAUDE.md`: no stale paths — **clean**
 
+### Mode-split claim instructions check (round 2)
+
+- `executor.md`: mode-split present — branch-first uses `git worktree add
+  existing-branch` + `move in_progress`; main-first uses `claim` — **correct**
+- `README.md §3`: mode-split present with concrete commands for each mode — **correct**
+- `README.md example prompt`: updated to reference executor.md for mode-split — **correct**
+- No doc still says "claim from main" for all modes — **clean**
+
+### Metadata reciprocity check (round 2)
+
+- `AI-012.blocks`: `[AI-014, AI-015]` — **restored**
+- `AI-013.blocks`: `[AI-014]` — **restored**
+- `AI-014.blocked_by`: `[AI-012, AI-013]` — **restored**
+- `python .ai-workflow/scripts/ai_task.py validate` after restore: **passed**
+
 ## Requirements coverage
 
 - [x] Manager docs say where task branches are created and what commit is expected
@@ -48,11 +63,17 @@ Searched updated docs for `tasks/<status>/` paths:
 - [x] No role skill tells agents active tasks are managed primarily in `main`
       after claim — executor.md, manager.md, reviewer.md all describe task-branch
       as the authoritative home for active work
-- [x] Executor instructions include commit expectations (steps 5–7 in executor.md)
+- [x] Executor instructions split by mode: branch-first worktree-on-existing-branch
+      vs main-first claim-from-main (round 2 fix)
+- [x] Executor instructions include commit expectations (mode-split section in executor.md)
 - [x] Reviewer instructions include commit expectations (commit discipline block
       in reviewer.md)
 - [x] User-facing docs explain active task discovery (`list-branches` in README.md
       Basic Commands and executor workflow step)
+- [x] `list-branches` described accurately: groups by merged/unmerged git reachability,
+      not by `done` status; `done` task may appear Active until human merges (round 2 fix)
+- [x] Out-of-scope metadata edits removed: AI-012/AI-013/AI-014 blocker relationships
+      restored to pre-task state (round 2 fix)
 - [x] Integration mode examples match config.yaml and AI-012 (README.md §5, full
       contract in `.ai-workflow/README.md`)
 - [x] Docs remain concise and usable as agent entrypoints
@@ -67,4 +88,5 @@ Searched updated docs for `tasks/<status>/` paths:
 - Forbidden files changed: none
 - Package changes: none
 - board.md: not touched
-- Task folders other than AI-014: only metadata.yaml relationship fields updated
+- Task folders other than AI-014: only AI-014's own report.md, validation.md,
+  metadata.yaml changed; AI-012 and AI-013 metadata restored to pre-task state

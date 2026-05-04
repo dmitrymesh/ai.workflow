@@ -13,7 +13,9 @@ external_tracker: null
 parent: "AI-011"
 children: []
 blocks: []
-blocked_by: []
+blocked_by:
+  - AI-012
+  - AI-013
 related: []
 created_at: "2026-05-04"
 updated_at: "2026-05-05"

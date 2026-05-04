@@ -11,9 +11,10 @@ to the task branch before handing off.
 ## Changed files
 
 - `.ai-workflow/skills/executor.md` — added "Discovering ready tasks" section
-  (`list-branches`, `show-branch`); expanded workflow steps with explicit
-  commit steps (commit artifacts before submit; commit metadata.yaml after
-  submit)
+  (`list-branches`, `show-branch`); replaced single claim workflow with
+  mode-split: branch-first (`git worktree add existing-branch` + `move in_progress`
+  + commit) and main-first legacy (`claim`); added explicit commit steps
+  (commit artifacts before submit; commit metadata.yaml after submit)
 - `.ai-workflow/skills/manager.md` — added "Branch-first task creation" section
   describing how to create a task branch, commit the draft, and note the human
   approval commit expectation
@@ -25,10 +26,10 @@ to the task branch before handing off.
 - `CLAUDE.md` — added `list-branches` to pre-task steps; added commit rules
   (commit before submit, commit metadata.yaml after submit)
 - `README.md` — added `list-branches` / `show-branch` to Basic Commands;
-  updated executor workflow step to show commit sequence; updated reviewer
-  workflow step to show commit sequence; updated example executor prompt
-- Metadata.yaml files for AI-012, AI-013, AI-014 — cleared completed blocker
-  relationships (AI-012, AI-013 now done; AI-014 unblocked)
+  replaced single-mode claim paragraph with mode-split (branch-first /
+  main-first) in executor workflow step (§3); corrected example executor
+  prompt to reference executor.md for mode-split instructions; updated
+  reviewer workflow step to show commit sequence
 
 ## Validation performed
 
@@ -56,3 +57,28 @@ to the task branch before handing off.
 ## Known risks
 
 - None. All changes are documentation-only; no behavioral code was modified.
+
+## Review fix notes (round 2)
+
+The reviewer identified three blocking issues:
+
+1. **Claim instructions conflated modes** — executor.md and README §3 still said
+   "claim from main checkout" for all modes. Fixed: executor.md now has a
+   mode-split section (branch-first: `git worktree add` existing branch + `move
+   in_progress` + commit; main-first legacy: `claim`). README §3 now has the
+   same split with concrete commands for each mode. The example executor prompt
+   was also updated to reference executor.md for the mode-split.
+
+2. **Out-of-scope metadata edits** — the original commit cleared `blocks` on
+   AI-012 (`[AI-014, AI-015]` → `[AI-015]`) and AI-013 (`[AI-014]` → `[]`),
+   and cleared `blocked_by` on AI-014 (`[AI-012, AI-013]` → `[]`). These are
+   outside the allowed scope of this documentation task. Fixed: restored
+   AI-012.blocks to `[AI-014, AI-015]`, AI-013.blocks to `[AI-014]`, and
+   AI-014.blocked_by to `[AI-012, AI-013]`.
+
+3. **`list-branches` description inaccuracy** — executor.md incorrectly equated
+   `done` status with merged and mentioned a nonexistent `[merged]` marker.
+   Fixed: description now correctly states the command groups by
+   merged/unmerged git reachability (Active vs Merged into main), and notes
+   that a reviewer-approved (`done`) task branch may still appear as Active
+   if the human has not yet merged it.

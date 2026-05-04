@@ -53,12 +53,13 @@ python .ai-workflow/scripts/ai_task.py list-branches
 python .ai-workflow/scripts/ai_task.py show-branch AI-001
 ```
 
-`list-branches` reads `metadata.yaml` from each `ai/*` branch and shows which
-tasks are `ready` (unclaimed), `in_progress` (already claimed), or `done`
-(merged). A branch marked **[merged]** is already in `main`.
+`list-branches` reads `metadata.yaml` from each `ai/*` branch and groups
+results into two sections: **Active (unmerged)** for branches whose tip is
+not yet reachable from `main`, and **Merged into main** for branches that
+have been integrated. A reviewer-approved (`done`) task branch may still
+appear as Active if the human has not yet merged it.
 
-Alternatively, if active tasks are still tracked in `main` (the legacy
-`main_first` mode), use:
+For the legacy `main_first` workflow (active tasks tracked in `main`), use:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py list
@@ -83,36 +84,58 @@ task-specific isolated branches and worktrees.
 
 **Your workflow inside the task worktree:**
 
-1. **Claim the task.** From the main checkout, run:
-   ```bash
-   python .ai-workflow/scripts/ai_task.py claim <TASK-ID>
-   ```
-   This verifies the task is `ready`, creates the task branch and worktree,
-   copies the approved task folder into the worktree, and moves the task to
-   `in_progress`. The command prints the worktree path and branch name.
+The entry path differs by workflow mode. Steps 2–6 are identical once you are
+inside the worktree.
 
-2. **Verify the current branch before editing.** Navigate to the printed
-   worktree path and run `git branch --show-current`. Confirm it matches
-   `metadata.yaml.branch` (format: `ai/<task-id>-<slug>`). If the branch is
-   wrong, stop and resolve before touching any files.
+**Branch-first mode (`workflow.mode: branch_first`):**
 
-3. Implement the task according to `task.md`.
+The manager created the task branch before the executor starts. Add a worktree
+to the pre-existing branch; do not create a new one.
 
-4. Write `report.md` and update `validation.md` inside the task folder in
+```bash
+# From the main checkout — open a worktree on the existing task branch:
+git worktree add ../<repo>.worktrees/<TASK-ID>-<slug> ai/<TASK-ID>-<slug>
+cd ../<repo>.worktrees/<TASK-ID>-<slug>
+```
+
+Verify the branch, then record your claim:
+
+```bash
+git branch --show-current   # must be ai/<TASK-ID>-<slug>
+python .ai-workflow/scripts/ai_task.py move <TASK-ID> in_progress
+git add <task-folder>/metadata.yaml
+git commit -m "chore: <TASK-ID> | claim task to in_progress"
+```
+
+**Main-first mode (`workflow.mode: main_first` — legacy):**
+
+The task folder is in `main`. Run `claim` from the main checkout; it creates
+the branch, worktree, and copies the approved task folder automatically:
+
+```bash
+python .ai-workflow/scripts/ai_task.py claim <TASK-ID>
+cd <printed worktree path>
+git branch --show-current   # must match metadata.yaml.branch
+```
+
+**Continuing in either mode (steps apply to both):**
+
+1. Implement the task according to `task.md`.
+
+2. Write `report.md` and update `validation.md` inside the task folder in
    the worktree.
 
-5. **Commit all changes to the task branch.** Include implementation files,
-   `report.md`, and `validation.md` in the same commit (or a logical sequence
-   of commits). Do not leave artifacts uncommitted before submitting.
+3. **Commit all changes to the task branch.** Include implementation files,
+   `report.md`, and `validation.md`. Do not leave artifacts uncommitted.
    ```bash
    git add <implementation files> <task-folder>/report.md <task-folder>/validation.md
    git commit -m "feat: <TASK-ID> | <short description>"
    ```
 
-6. **Submit:** `python .ai-workflow/scripts/ai_task.py submit <TASK-ID>`
+4. **Submit:** `python .ai-workflow/scripts/ai_task.py submit <TASK-ID>`
    This updates `metadata.yaml` to `ready_for_review` in the worktree filesystem.
 
-7. **Commit the status update:**
+5. **Commit the status update:**
    ```bash
    git add <task-folder>/metadata.yaml
    git commit -m "chore: <TASK-ID> | submit task to ready_for_review"
@@ -120,7 +143,7 @@ task-specific isolated branches and worktrees.
    The reviewer reads from the committed branch state. A `ready_for_review`
    status that is only on disk but not committed is invisible to the reviewer.
 
-8. All commits go on the task branch; do not push to `main`.
+All commits go on the task branch; do not push to `main`.
 
 **Exceptional case — direct main checkout edit:**
 

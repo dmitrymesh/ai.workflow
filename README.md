@@ -335,14 +335,31 @@ python .ai-workflow/scripts/ai_task.py list-branches   # branch-first
 python .ai-workflow/scripts/ai_task.py list            # or main-first / history
 ```
 
-Then claims the chosen task from the main checkout:
+Then opens the task worktree. The method depends on the workflow mode
+(check `workflow.mode` in `.ai-workflow/config.yaml`):
+
+**Branch-first (`workflow.mode: branch_first`)** — the manager created the branch;
+open a worktree on the pre-existing branch from the main checkout:
+
+```bash
+git worktree add ../ai_workflow.worktrees/AI-001-<slug> ai/AI-001-<slug>
+cd ../ai_workflow.worktrees/AI-001-<slug>
+git branch --show-current   # must be ai/AI-001-<slug>
+
+python .ai-workflow/scripts/ai_task.py move AI-001 in_progress
+git add .ai-workflow/tasks/AI-001-<slug>/metadata.yaml
+git commit -m "chore: AI-001 | claim task to in_progress"
+```
+
+**Main-first (`workflow.mode: main_first` — legacy)** — run `claim` from the
+main checkout; it creates the branch, worktree, and copies the task folder:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py claim AI-001
+cd <printed worktree path>
+git branch --show-current   # must match metadata.yaml.branch
 ```
 
-`claim` creates an isolated git worktree on a task branch (`ai/<task-id>-<slug>`),
-copies the approved task folder into the worktree, and moves the task to `in_progress`.
 The executor implements the task inside the worktree, writes `report.md` and
 `validation.md`, then **commits** those artifacts before submitting:
 
@@ -501,8 +518,9 @@ Rules:
 - Do not expand scope.
 - Before editing, list planned files.
 - Do not modify forbidden Unity files unless task.md explicitly allows it.
-- Run: python .ai-workflow/scripts/ai_task.py claim AI-001
-- Work inside the printed worktree path. Verify the branch matches metadata.yaml.branch.
+- Open the task worktree per executor.md (branch-first: git worktree add existing branch +
+  move in_progress; main-first: claim AI-001).
+- Work inside the worktree. Verify the branch matches metadata.yaml.branch.
 - Write report.md and validation.md.
 - Commit implementation + report.md + validation.md to the task branch.
 - Run: python .ai-workflow/scripts/ai_task.py submit AI-001
