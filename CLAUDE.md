@@ -10,8 +10,9 @@ Before executing a task:
 
 1. Read `.ai-workflow/skills/executor.md`.
 2. Read `.ai-workflow/skills/unity-guardrails.md` if this is a Unity project.
-3. Read the target task folder.
-4. Follow `task.md` exactly.
+3. Discover ready tasks: `python .ai-workflow/scripts/ai_task.py list-branches`
+4. Read the target task folder.
+5. Follow `task.md` exactly.
 
 Execution rules:
 
@@ -21,5 +22,7 @@ Execution rules:
 - If you need to modify forbidden files, stop and write the reason in `report.md`.
 - After implementation, write `report.md`.
 - Update `validation.md` honestly.
-- Move task to `ready_for_review` only after implementation is complete.
+- **Commit** implementation + report.md + validation.md to the task branch before submitting.
+- Run `submit <TASK-ID>` to move to `ready_for_review`.
+- **Commit** the updated `metadata.yaml` after submit so the branch state is review-ready.
 - Never move a task to `done`.

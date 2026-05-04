@@ -97,6 +97,48 @@ The slug is derived from the task folder name (everything after `<task-id>-`).
 
 ---
 
+## Branch-first task creation
+
+In the branch-first workflow (`workflow.mode: branch_first` in `config.yaml`),
+task folders live in their own task branch — not in `main`. The manager creates
+the task branch and commits the task folder there.
+
+**Steps:**
+
+```bash
+# 1. Create the task branch from main
+git checkout main
+git checkout -b ai/AI-NNN-slug
+
+# 2. Create the task folder (draft status)
+python .ai-workflow/scripts/ai_task.py create "Task title" --risk medium --area workflow
+
+# 3. Commit the draft task contract to the task branch
+git add .ai-workflow/tasks/AI-NNN-slug/
+git commit -m "feat: AI-NNN | draft task contract"
+
+# 4. Push the branch if using pull_request integration
+git push -u origin ai/AI-NNN-slug
+```
+
+Leave the task in `draft` and report that human approval is needed. The manager
+does **not** move the task to `ready`. The human runs:
+
+```bash
+python .ai-workflow/scripts/ai_task.py move AI-NNN ready
+git add .ai-workflow/tasks/AI-NNN-slug/metadata.yaml
+git commit -m "chore: AI-NNN | approve task to ready"
+```
+
+After the human commits the `ready` status to the task branch, it becomes
+visible to executors via `list-branches`.
+
+**Note:** In the legacy `main_first` mode (`workflow.mode: main_first`), tasks
+are created directly in `main` via `create` and committed there. The executor
+then discovers them via `list`.
+
+---
+
 ## Post-approval executor handoff
 
 After the human approves a task and moves it to `ready`, the executor

@@ -40,6 +40,32 @@ Validation honesty:
 
 ---
 
+## Discovering ready tasks
+
+In the branch-first workflow, `ready` tasks are not guaranteed to be in `main`.
+Use the discovery commands to find them:
+
+```bash
+# List all active task branches with status, title, and blockers
+python .ai-workflow/scripts/ai_task.py list-branches
+
+# Inspect a specific task branch without switching to it
+python .ai-workflow/scripts/ai_task.py show-branch AI-001
+```
+
+`list-branches` reads `metadata.yaml` from each `ai/*` branch and shows which
+tasks are `ready` (unclaimed), `in_progress` (already claimed), or `done`
+(merged). A branch marked **[merged]** is already in `main`.
+
+Alternatively, if active tasks are still tracked in `main` (the legacy
+`main_first` mode), use:
+
+```bash
+python .ai-workflow/scripts/ai_task.py list
+```
+
+---
+
 ## Execution environment: task worktrees (default)
 
 Every task should be implemented inside its assigned task worktree, not by
@@ -75,9 +101,26 @@ task-specific isolated branches and worktrees.
 4. Write `report.md` and update `validation.md` inside the task folder in
    the worktree.
 
-5. **Submit:** `python .ai-workflow/scripts/ai_task.py submit <TASK-ID>`
+5. **Commit all changes to the task branch.** Include implementation files,
+   `report.md`, and `validation.md` in the same commit (or a logical sequence
+   of commits). Do not leave artifacts uncommitted before submitting.
+   ```bash
+   git add <implementation files> <task-folder>/report.md <task-folder>/validation.md
+   git commit -m "feat: <TASK-ID> | <short description>"
+   ```
 
-6. All commits go on the task branch; do not push to `main`.
+6. **Submit:** `python .ai-workflow/scripts/ai_task.py submit <TASK-ID>`
+   This updates `metadata.yaml` to `ready_for_review` in the worktree filesystem.
+
+7. **Commit the status update:**
+   ```bash
+   git add <task-folder>/metadata.yaml
+   git commit -m "chore: <TASK-ID> | submit task to ready_for_review"
+   ```
+   The reviewer reads from the committed branch state. A `ready_for_review`
+   status that is only on disk but not committed is invisible to the reviewer.
+
+8. All commits go on the task branch; do not push to `main`.
 
 **Exceptional case — direct main checkout edit:**
 

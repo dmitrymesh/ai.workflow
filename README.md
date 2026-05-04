@@ -172,10 +172,20 @@ Migrate tasks from the legacy status-by-directory layout to the current flat lay
 python .ai-workflow/scripts/ai_task.py migrate
 ```
 
-List tasks:
+List tasks (from main checkout — completed history and main-first active tasks):
 
 ```bash
 python .ai-workflow/scripts/ai_task.py list
+```
+
+Discover active tasks from task branches (branch-first workflow):
+
+```bash
+# All active task branches with status, title, and blockers
+python .ai-workflow/scripts/ai_task.py list-branches
+
+# Inspect one task branch without switching to it
+python .ai-workflow/scripts/ai_task.py show-branch AI-001
 ```
 
 Generate board:
@@ -318,7 +328,14 @@ Only a human should perform this step.
 
 ### 3. Executor implements
 
-The executor agent (configured in `.ai-workflow/config.yaml` under `agents.executor` — default: Claude Code) reads `.ai-workflow/skills/executor.md` and the task folder, then claims the task from the main checkout:
+The executor agent (configured in `.ai-workflow/config.yaml` under `agents.executor` — default: Claude Code) reads `.ai-workflow/skills/executor.md` and discovers ready tasks:
+
+```bash
+python .ai-workflow/scripts/ai_task.py list-branches   # branch-first
+python .ai-workflow/scripts/ai_task.py list            # or main-first / history
+```
+
+Then claims the chosen task from the main checkout:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py claim AI-001
@@ -327,10 +344,16 @@ python .ai-workflow/scripts/ai_task.py claim AI-001
 `claim` creates an isolated git worktree on a task branch (`ai/<task-id>-<slug>`),
 copies the approved task folder into the worktree, and moves the task to `in_progress`.
 The executor implements the task inside the worktree, writes `report.md` and
-`validation.md`, then submits:
+`validation.md`, then **commits** those artifacts before submitting:
 
 ```bash
+git add <files> .ai-workflow/tasks/AI-001-slug/report.md .ai-workflow/tasks/AI-001-slug/validation.md
+git commit -m "feat: AI-001 | <description>"
+
 python .ai-workflow/scripts/ai_task.py submit AI-001
+
+git add .ai-workflow/tasks/AI-001-slug/metadata.yaml
+git commit -m "chore: AI-001 | submit task to ready_for_review"
 ```
 
 All commits go on the task branch; do not push to `main`.
@@ -346,32 +369,23 @@ git diff main...ai/<task-id>-<slug>
 reviewer.md skill
 ```
 
-Then it writes:
-
-```text
-review.md
-decision.yaml
-```
-
-Decision must be one of:
-
-```text
-approve
-changes_requested
-reject
-```
-
-If approved, task moves to `done`:
+Then it writes `review.md` and `decision.yaml`, runs the review command, and
+**commits the artifacts to the task branch**:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py review AI-001 --approve
+python .ai-workflow/scripts/ai_task.py review AI-001 --approve   # or --changes-requested
+
+git add .ai-workflow/tasks/AI-001-slug/review.md \
+        .ai-workflow/tasks/AI-001-slug/decision.yaml \
+        .ai-workflow/tasks/AI-001-slug/metadata.yaml
+git commit -m "review: AI-001 approve|changes-requested <short reason>"
 ```
 
-If changes are needed:
+Decision must be one of: `approve`, `changes_requested`, `reject`.
 
-```bash
-python .ai-workflow/scripts/ai_task.py review AI-001 --changes-requested
-```
+Committing the review artifacts to the task branch ensures the executor
+receives the feedback when they re-enter the worktree, and the complete
+record (contract → implementation → review) travels together to `main`.
 
 ### 5. Human merges
 
@@ -476,6 +490,10 @@ Do not move the task to ready — report that human approval is needed before ex
 Read your adapter entrypoint (e.g. CLAUDE.md) or .ai-workflow/README.md.
 Read .ai-workflow/config.yaml to confirm your role.
 Read .ai-workflow/skills/executor.md.
+
+Discover ready tasks:
+  python .ai-workflow/scripts/ai_task.py list-branches
+
 Execute task AI-001.
 
 Rules:
@@ -486,7 +504,9 @@ Rules:
 - Run: python .ai-workflow/scripts/ai_task.py claim AI-001
 - Work inside the printed worktree path. Verify the branch matches metadata.yaml.branch.
 - Write report.md and validation.md.
+- Commit implementation + report.md + validation.md to the task branch.
 - Run: python .ai-workflow/scripts/ai_task.py submit AI-001
+- Commit the updated metadata.yaml after submit.
 ```
 
 ## Example reviewer prompt (default tool: Codex — adapt using config.yaml)

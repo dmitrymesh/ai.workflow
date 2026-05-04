@@ -14,7 +14,13 @@ Before managing, executing, or reviewing AI tasks:
    - `.ai-workflow/skills/manager.md`
    - `.ai-workflow/skills/executor.md`
    - `.ai-workflow/skills/reviewer.md`
-4. Read the target task folder under `.ai-workflow/tasks/<status>/<task-id>/`.
+4. **Discover active tasks** — active tasks may be in task branches, not in `main`:
+   ```bash
+   python .ai-workflow/scripts/ai_task.py list-branches   # branch-first mode
+   python .ai-workflow/scripts/ai_task.py list            # main-first / history
+   ```
+5. Read the target task folder. Task folders have stable paths:
+   `.ai-workflow/tasks/<task-id>-<slug>/`
 
 General rules:
 

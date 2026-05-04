@@ -1,21 +1,19 @@
 id: "AI-014"
 title: "Update agent docs for branch-first workflow"
-status: "ready"
+status: "in_progress"
 risk: "medium"
 area:
   - workflow
   - docs
 owner: null
 reviewer: null
-branch: null
+branch: "ai/AI-014-update-agent-docs-for-branch-first-workflow"
 pr: null
 external_tracker: null
 parent: "AI-011"
 children: []
 blocks: []
-blocked_by:
-  - AI-012
-  - AI-013
+blocked_by: []
 related: []
 created_at: "2026-05-04"
-updated_at: "2026-05-04"
+updated_at: "2026-05-05"

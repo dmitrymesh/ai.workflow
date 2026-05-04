@@ -36,6 +36,20 @@ CLI commands you may run:
 - `python .ai-workflow/scripts/ai_task.py review <TASK-ID> --changes-requested` — moves `ready_for_review → changes_requested`
 - `python .ai-workflow/scripts/ai_task.py move <TASK-ID> rejected` — rejects the task
 
+**Commit discipline:** After writing `review.md` and running the review command,
+commit the artifacts to the task branch **before** handing off:
+
+```bash
+python .ai-workflow/scripts/ai_task.py review <TASK-ID> --approve   # or --changes-requested
+
+git add <task-folder>/review.md <task-folder>/decision.yaml <task-folder>/metadata.yaml
+git commit -m "review: <TASK-ID> approve|changes-requested <short reason>"
+```
+
+A review decision that is only on disk but not committed is invisible to the
+executor when they re-enter the worktree. All review artifacts must travel with
+the task branch so the branch can be merged or handed back as a complete record.
+
 Review output must include:
 
 - Decision
