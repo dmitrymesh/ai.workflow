@@ -1,6 +1,6 @@
 id: "AI-010"
 title: "Update root README for flat task workflow"
-status: "in_progress"
+status: "done"
 risk: "low"
 area:
   - docs
