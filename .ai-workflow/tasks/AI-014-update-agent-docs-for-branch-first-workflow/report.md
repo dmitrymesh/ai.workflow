@@ -58,6 +58,18 @@ to the task branch before handing off.
 
 - None. All changes are documentation-only; no behavioral code was modified.
 
+## Review fix notes (round 3)
+
+The reviewer identified one blocking issue:
+
+1. **manager.md post-approval handoff still main-first only** — the "Post-approval
+   executor handoff" section described only `claim` from the main checkout with no
+   mode split. Fixed: the section now splits by mode. Branch-first explains that the
+   task branch already exists, the executor discovers it via `list-branches`, opens a
+   worktree on the pre-existing branch with `git worktree add`, and runs `move
+   in_progress` + commit — no `claim` needed. Main-first (legacy) retains the `claim`
+   instructions. Cleanup commands are consolidated under a "both modes" note.
+
 ## Review fix notes (round 2)
 
 The reviewer identified three blocking issues:

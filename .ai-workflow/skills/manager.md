@@ -141,25 +141,46 @@ then discovers them via `list`.
 
 ## Post-approval executor handoff
 
-After the human approves a task and moves it to `ready`, the executor
-self-service claims it using the `claim` command — no manager action is needed:
+After the human approves a task and moves it to `ready`, the executor opens the
+task worktree. No manager action is required — the manager's responsibility ends
+once the task contract in `task.md` is complete and the task is unblocked.
+
+The handoff method depends on the workflow mode:
+
+**Branch-first (`workflow.mode: branch_first`):**
+
+The task branch already exists (created by the manager in the branch-first
+creation section above). The executor discovers the ready task via
+`list-branches` and opens a worktree on the pre-existing branch:
+
+```bash
+# Executor discovers ready tasks:
+python .ai-workflow/scripts/ai_task.py list-branches
+
+# Executor opens a worktree on the existing task branch:
+git worktree add ../ai_workflow.worktrees/AI-003-slug ai/AI-003-slug
+cd ../ai_workflow.worktrees/AI-003-slug
+
+python .ai-workflow/scripts/ai_task.py move AI-003 in_progress
+git add .ai-workflow/tasks/AI-003-slug/metadata.yaml
+git commit -m "chore: AI-003 | claim task to in_progress"
+```
+
+The manager does not create a worktree or run `claim` — the task branch is
+the executor's entry point.
+
+**Main-first (`workflow.mode: main_first` — legacy):**
+
+Tasks are tracked in `main`. The executor self-service claims via the `claim`
+command from the main checkout:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py claim AI-003
+cd <printed worktree path>
 ```
 
-This command (run by the executor from the main checkout):
-
-1. Verifies the task is `ready` and unblocked.
-2. Computes the branch name (`ai/<task-id>-<slug>`) and worktree path.
-3. Creates the worktree with `git worktree add -b <branch> <path>`.
-4. Copies the approved task folder into the worktree so the executor can read `task.md`.
-5. Records the assigned branch in `metadata.yaml.branch`.
-6. Moves the task to `in_progress`.
-
-No manager handoff step is required between human approval and executor start.
-The manager's responsibility is to ensure the task contract in `task.md` is
-complete and the task is unblocked before the human moves it to `ready`.
+This command creates the worktree with `git worktree add -b <branch> <path>`,
+copies the approved task folder into it, and moves the task to `in_progress`.
 
 If an executor needs git commands printed without execution (e.g., in an
 environment where git is unavailable), they can use:
@@ -168,11 +189,11 @@ environment where git is unavailable), they can use:
 python .ai-workflow/scripts/ai_task.py claim AI-003 --print-only
 ```
 
-**Cleanup after task completion or rejection:**
+**Cleanup after task completion or rejection (both modes):**
 
 ```bash
-git worktree remove ../ai_workflow.worktrees/AI-003-add-git-worktree-execution-workflow
-git branch -d ai/AI-003-add-git-worktree-execution-workflow  # after merging
+git worktree remove ../ai_workflow.worktrees/AI-003-slug
+git branch -d ai/AI-003-slug   # after merging
 ```
 
 For rejected tasks, use `git branch -D` (force delete) if the branch was never merged.

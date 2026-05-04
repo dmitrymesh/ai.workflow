@@ -29,6 +29,13 @@ Searched updated docs for `tasks/<status>/` paths:
 - `executor.md`, `manager.md`, `reviewer.md`: no stale paths — **clean**
 - `CLAUDE.md`: no stale paths — **clean**
 
+### manager.md post-approval handoff mode-split check (round 3)
+
+- `manager.md` "Post-approval executor handoff": mode-split present — branch-first
+  uses `list-branches` discovery + `git worktree add existing-branch` + `move
+  in_progress`; main-first uses `claim` — **correct**
+- No doc says "executor uses claim from main" for branch-first tasks — **clean**
+
 ### Mode-split claim instructions check (round 2)
 
 - `executor.md`: mode-split present — branch-first uses `git worktree add
@@ -62,7 +69,8 @@ Searched updated docs for `tasks/<status>/` paths:
 
 - [x] No role skill tells agents active tasks are managed primarily in `main`
       after claim — executor.md, manager.md, reviewer.md all describe task-branch
-      as the authoritative home for active work
+      as the authoritative home for active work (round 3: manager.md handoff
+      section now mode-split; branch-first no longer references `claim` from main)
 - [x] Executor instructions split by mode: branch-first worktree-on-existing-branch
       vs main-first claim-from-main (round 2 fix)
 - [x] Executor instructions include commit expectations (mode-split section in executor.md)
