@@ -1,0 +1,23 @@
+id: "AI-012"
+title: "Design branch-first task workflow contract"
+status: "ready"
+risk: "medium"
+area:
+  - workflow
+  - git
+  - docs
+owner: null
+reviewer: null
+branch: null
+pr: null
+external_tracker: null
+parent: "AI-011"
+children: []
+blocks:
+  - AI-013
+  - AI-014
+  - AI-015
+blocked_by: []
+related: []
+created_at: "2026-05-04"
+updated_at: "2026-05-04"

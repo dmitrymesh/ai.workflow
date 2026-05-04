@@ -11,6 +11,7 @@ This folder contains the local AI task protocol for this repository.
 | Path | Purpose |
 |------|---------|
 | `.ai-workflow/README.md` | Protocol overview and setup |
+| `.ai-workflow/PROJECT_GOALS.md` | Project goals and decision heuristics |
 | `.ai-workflow/config.yaml` | Role assignments, statuses, transitions |
 | `.ai-workflow/skills/<role>.md` | Role instructions (manager, executor, reviewer) |
 

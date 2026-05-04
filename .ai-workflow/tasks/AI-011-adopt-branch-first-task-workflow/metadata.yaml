@@ -1,21 +1,25 @@
-id: "AI-010"
-title: "Update root README for flat task workflow"
-status: "done"
-risk: "low"
+id: "AI-011"
+title: "Adopt branch-first task workflow"
+status: "ready"
+risk: "high"
 area:
-  - docs
   - workflow
+  - git
 owner: null
 reviewer: null
-branch: "ai/AI-010-update-root-readme-for-flat-task-workflow"
+branch: null
 pr: null
 external_tracker: null
 parent: null
-children: []
+children:
+  - AI-012
+  - AI-013
+  - AI-014
+  - AI-015
 blocks: []
 blocked_by: []
 related:
   - AI-009
-  - AI-011
+  - AI-010
 created_at: "2026-05-04"
 updated_at: "2026-05-04"

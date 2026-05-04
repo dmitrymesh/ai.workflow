@@ -1,0 +1,22 @@
+id: "AI-013"
+title: "Implement branch task discovery commands"
+status: "ready"
+risk: "high"
+area:
+  - workflow
+  - git
+  - cli
+owner: null
+reviewer: null
+branch: null
+pr: null
+external_tracker: null
+parent: "AI-011"
+children: []
+blocks:
+  - AI-014
+blocked_by:
+  - AI-012
+related: []
+created_at: "2026-05-04"
+updated_at: "2026-05-04"
