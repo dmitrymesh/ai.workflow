@@ -1,6 +1,6 @@
 id: "AI-015"
 title: "Document worktree execution rules for task chains"
-status: "changes_requested"
+status: "ready_for_review"
 risk: "low"
 area:
   - workflow
