@@ -30,6 +30,8 @@ Usage:
   python .ai-workflow/scripts/ai_task.py history --area workflow
   python .ai-workflow/scripts/ai_task.py history --keyword install
   python .ai-workflow/scripts/ai_task.py history --show AI-005
+  python .ai-workflow/scripts/ai_task.py list-branches
+  python .ai-workflow/scripts/ai_task.py show-branch AI-001
 
 Module layout (all under .ai-workflow/scripts/):
   _core.py          constants, path utils, YAML, config, task discovery, relationship utils
@@ -41,6 +43,7 @@ Module layout (all under .ai-workflow/scripts/):
   _migrate.py       migrate
   _install.py       install_plan
   _history.py       history
+  _discovery.py     list_branches, show_branch  (branch-first task discovery)
   ai_task.py        init, build_parser, main  (this file — CLI entrypoint only)
 """
 
@@ -58,6 +61,7 @@ from _migrate import migrate
 from _relationships import link_tasks, show_task, unlink_tasks
 from _tasks import create_task, human_request_changes, move_task, print_task_path, review_task, submit_task
 from _validate import validate
+from _discovery import list_branches, show_branch
 from _worktree import claim_task, prepare_worktree
 
 
@@ -264,6 +268,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_history.add_argument("--keyword", default=None, help="Filter titles by keyword")
     p_history.add_argument("--show", metavar="TASK_ID", default=None, help="Print report for a done task")
     p_history.set_defaults(func=history)
+
+    p_list_branches = sub.add_parser(
+        "list-branches",
+        help=(
+            "Branch-first discovery: scan task branches and print active task metadata. "
+            "Scope is governed by workflow.discovery in config.yaml (default: local)."
+        ),
+    )
+    p_list_branches.set_defaults(func=list_branches)
+
+    p_show_branch = sub.add_parser(
+        "show-branch",
+        help=(
+            "Branch-first discovery: show task metadata from a task branch without "
+            "switching to it. Reads metadata.yaml directly from the branch."
+        ),
+    )
+    p_show_branch.add_argument("task_id", help="Task ID to look up (e.g. AI-013)")
+    p_show_branch.set_defaults(func=show_branch)
 
     return parser
 
