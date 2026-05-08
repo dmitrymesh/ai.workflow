@@ -2,15 +2,16 @@
 
 ## Decision
 
-changes_requested
+approve
 
 ## Blocking issues
 
-- The audit contains a stale/incorrect finding: `report.md` says `.ai-workflow/config.yaml` has `workflow.mode: main_first` and proposes AI-022 to set it to `branch_first`, but the AI-018 branch itself already has `workflow.mode: branch_first` in `.ai-workflow/config.yaml`. I confirmed this both in the AI-018 worktree and from `main`; there is no diff for `config.yaml` between `main` and `ai/AI-018-audit-workflow-and-plan-cli-refactor`. Because this is an audit/planning task, false findings directly corrupt the refactor backlog. Update the finding and refactor plan: either remove this item, or replace it with the remaining doc/list-discovery issue if that is still valid after inspection.
+- None.
 
 ## Non-blocking issues
 
-- `validation.md` records `list` output from before submit (`AI-018` under `in_progress`), while the branch is now `ready_for_review`. That is acceptable if it was the exact result at execution time, but it would be clearer to note that the command was run before submit.
+- The README/list-branches finding is valid but is not represented as a standalone refactor-plan task. That is acceptable for this audit because the plan is a prioritized candidate backlog rather than a strict one-task-per-finding map, but it should be considered when creating follow-up tasks.
+- `validation.md` records `list` output from before submit (`AI-018` under `in_progress`), while the branch is now `ready_for_review`. This appears to be the exact command result at execution time and does not affect the audit decision.
 
 ## Scope check
 
@@ -18,21 +19,22 @@ In scope. The branch contains task artifacts and reciprocal `related` metadata l
 
 ## Acceptance criteria check
 
-Partially met.
+Met.
 
-- Workflow review with verdict: met.
-- Findings ordered by severity and tied to files/commands: structurally met, but one finding is factually wrong.
-- Refactor plan with small follow-up tasks: structurally met, but includes a stale config-mode task.
-- Human approval friction and `approve <TASK-ID>` recommendation: met.
+- Workflow review with verdict: met (`conditionally ready`).
+- Findings ordered by severity and tied to files/commands: met.
+- Refactor plan with small follow-up tasks, scope, risk, and validation: met.
+- Branch-first human approval friction and `approve <TASK-ID>` recommendation: met.
 - AI-017 merge-before-refactor statement: met.
 - Worktree convention check and exceptions: met.
 - Required validation commands recorded: met.
+- Standard-location risk from manual branch-first worktree creation is identified: met.
 - No implementation refactor performed: met.
 
 ## Test quality
 
-Audit validation is adequate: `validate`, `list`, `list-branches`, `show-branch AI-017`, and `git worktree list` were recorded, and I reran the core read-only checks during review.
+Audit validation is adequate: `validate`, `list`, `list-branches`, `show-branch AI-017`, `git worktree list`, script inspection, and diff review were recorded. I reran `validate`, `list-branches`, diff-name review, and `git worktree list` during review.
 
 ## Required fixes
 
-- Correct the stale `workflow.mode: main_first` finding and the corresponding AI-022 refactor-plan item so the backlog reflects the current branch state.
+- None.
