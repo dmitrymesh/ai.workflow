@@ -10,8 +10,12 @@ from _core import (
     dump_simple_yaml,
     ensure_structure,
     find_task,
+    find_task_optional,
     next_task_id,
+    normalize_meta,
+    remove_if_present,
     render_template,
+    save_meta,
     slugify,
     tasks_root,
     today,
@@ -100,10 +104,74 @@ def submit_task(args: argparse.Namespace) -> None:
     print(f"Submitted {meta.get('id', args.task_id)}: {current_status} -> ready_for_review")
 
 
+def _unblock_dependent_tasks(completed_id: str, meta: dict) -> list:
+    """Remove completed_id from blocked_by on every task it was blocking.
+
+    Clears meta["blocks"] in place so the completed task's blocks list is empty.
+    Returns the list of task IDs that were unblocked.
+    """
+    unblocked = []
+    for dep_id in list(meta.get("blocks", [])):
+        found = find_task_optional(dep_id)
+        if not found:
+            continue
+        dep_dir, dep_meta = found
+        normalize_meta(dep_meta)
+        if remove_if_present(dep_meta["blocked_by"], completed_id):
+            save_meta(dep_dir, dep_meta)
+            unblocked.append(dep_id)
+    meta["blocks"] = []
+    return unblocked
+
+
+def _cascade_parent_done(task_id: str) -> list:
+    """If task_id's parent now has all children done, mark it done and recurse upward.
+
+    Returns the list of parent task IDs that were auto-completed (in cascade order).
+    """
+    auto_done = []
+    found = find_task_optional(task_id)
+    if not found:
+        return auto_done
+    _, task_meta = found
+    normalize_meta(task_meta)
+    parent_id = task_meta.get("parent")
+    if not parent_id:
+        return auto_done
+
+    parent_found = find_task_optional(parent_id)
+    if not parent_found:
+        return auto_done
+    parent_dir, parent_meta = parent_found
+    normalize_meta(parent_meta)
+
+    if str(parent_meta.get("status") or "") == "done":
+        return auto_done  # idempotent: already done
+
+    children = parent_meta.get("children", [])
+    if not children:
+        return auto_done  # no children recorded: do not auto-close
+
+    for sibling_id in children:
+        sib_found = find_task_optional(sibling_id)
+        if not sib_found:
+            return auto_done  # unknown sibling: cannot confirm all done
+        _, sib_meta = sib_found
+        if str(sib_meta.get("status") or "") != "done":
+            return auto_done  # at least one sibling not done
+
+    parent_meta["status"] = "done"
+    save_meta(parent_dir, parent_meta)
+    auto_done.append(parent_id)
+    auto_done.extend(_cascade_parent_done(parent_id))
+    return auto_done
+
+
 def review_task(args: argparse.Namespace) -> None:
     """Reviewer action: approve (-> done) or request changes (-> changes_requested)."""
     task_dir, meta = find_task(args.task_id)
     current_status = str(meta.get("status") or task_dir.parent.name)
+    task_id = str(meta.get("id") or args.task_id)
 
     if current_status != "ready_for_review":
         raise SystemExit(
@@ -119,9 +187,24 @@ def review_task(args: argparse.Namespace) -> None:
 
     meta["status"] = target
     meta["updated_at"] = today()
+
+    unblocked: list = []
+    if args.approve:
+        normalize_meta(meta)
+        unblocked = _unblock_dependent_tasks(task_id, meta)
+
     write_text(task_dir / "metadata.yaml", dump_simple_yaml(meta))
+
+    auto_done: list = []
+    if args.approve:
+        auto_done = _cascade_parent_done(task_id)
+
     generate_board(print_result=False)
-    print(f"Reviewed {meta.get('id', args.task_id)}: {current_status} -> {target}")
+    print(f"Reviewed {task_id}: {current_status} -> {target}")
+    for dep_id in unblocked:
+        print(f"  Unblocked: {dep_id}")
+    for parent_id in auto_done:
+        print(f"  Auto-completed parent: {parent_id}")
 
 
 def human_request_changes(args: argparse.Namespace) -> None:
