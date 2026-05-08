@@ -114,7 +114,9 @@ def _unblock_dependent_tasks(completed_id: str, meta: dict) -> list:
     for dep_id in list(meta.get("blocks", [])):
         found = find_task_optional(dep_id)
         if not found:
-            continue
+            raise SystemExit(
+                f"Cascade error: {completed_id}.blocks references missing task '{dep_id}'"
+            )
         dep_dir, dep_meta = found
         normalize_meta(dep_meta)
         if remove_if_present(dep_meta["blocked_by"], completed_id):
@@ -132,7 +134,7 @@ def _cascade_parent_done(task_id: str) -> list:
     auto_done = []
     found = find_task_optional(task_id)
     if not found:
-        return auto_done
+        raise SystemExit(f"Cascade error: completed task '{task_id}' not found after approval")
     _, task_meta = found
     normalize_meta(task_meta)
     parent_id = task_meta.get("parent")
@@ -141,7 +143,9 @@ def _cascade_parent_done(task_id: str) -> list:
 
     parent_found = find_task_optional(parent_id)
     if not parent_found:
-        return auto_done
+        raise SystemExit(
+            f"Cascade error: {task_id}.parent references missing task '{parent_id}'"
+        )
     parent_dir, parent_meta = parent_found
     normalize_meta(parent_meta)
 
@@ -155,7 +159,9 @@ def _cascade_parent_done(task_id: str) -> list:
     for sibling_id in children:
         sib_found = find_task_optional(sibling_id)
         if not sib_found:
-            return auto_done  # unknown sibling: cannot confirm all done
+            raise SystemExit(
+                f"Cascade error: {parent_id}.children references missing task '{sibling_id}'"
+            )
         _, sib_meta = sib_found
         if str(sib_meta.get("status") or "") != "done":
             return auto_done  # at least one sibling not done

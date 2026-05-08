@@ -3,7 +3,7 @@
 ## Local
 
 - Workflow validate: `python .ai-workflow/scripts/ai_task.py validate` → **passed**
-- Cascade unit tests: `python -m unittest test_cascade -v` (from `scripts/`) → **6/6 passed**
+- Cascade unit tests: `python -m unittest test_cascade -v` (from `scripts/`) → **8/8 passed**
 - Integration/PlayMode tests: not applicable (Python CLI project, not Unity)
 
 ## Human review
@@ -24,4 +24,6 @@ All acceptance-criteria test scenarios pass (6 tests):
 3. Ancestor cascade across two levels ✓
 4. Parent stays open when sibling not done ✓
 5. Idempotent unblock ✓
-6. Auto-completed parent unblocks its downstream tasks ✓ (regression from round-2 review)
+6. Auto-completed parent unblocks its downstream tasks ✓ (round-2 regression)
+7. Missing blocked task fails with both IDs in error ✓ (round-3 regression)
+8. Missing sibling in parent children fails with parent+sibling IDs in error ✓ (round-3 regression)

@@ -162,5 +162,32 @@ class TestAncestorCascade(_WorkflowBase):
         self.assertEqual(g["status"], "done")
 
 
+class TestCascadeErrorMessages(_WorkflowBase):
+    def test_missing_blocked_task_fails_with_ids(self) -> None:
+        """Approving a task whose blocks list names a missing task raises and names both IDs."""
+        _make_task(self.tasks_dir, "AI-A", "task-a", "ready_for_review",
+                   blocks=["AI-GHOST"])
+
+        with self.assertRaises(SystemExit) as cm:
+            _approve("AI-A")
+
+        msg = str(cm.exception)
+        self.assertIn("AI-A", msg)
+        self.assertIn("AI-GHOST", msg)
+
+    def test_missing_sibling_in_parent_fails_with_ids(self) -> None:
+        """Cascade error for a missing child referenced by a parent names both IDs."""
+        _make_task(self.tasks_dir, "AI-P", "parent", "in_progress",
+                   children=["AI-C", "AI-GHOST"])
+        _make_task(self.tasks_dir, "AI-C", "child", "ready_for_review", parent="AI-P")
+
+        with self.assertRaises(SystemExit) as cm:
+            _approve("AI-C")
+
+        msg = str(cm.exception)
+        self.assertIn("AI-P", msg)
+        self.assertIn("AI-GHOST", msg)
+
+
 if __name__ == "__main__":
     unittest.main()

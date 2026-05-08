@@ -12,6 +12,16 @@ the parent chain and auto-completes any ancestor whose children are all `done`.
 metadata, so parents that block downstream tasks are fully cleaned up when they
 reach `done` through the cascade — not only when directly reviewed.
 
+**Round-3 fix (changes_requested):** Replaced every silent `continue`/`return`
+path for missing relationship targets with `raise SystemExit(...)` that names
+the affected task IDs. Specifically:
+- `_unblock_dependent_tasks`: missing `dep_id` → error naming `completed_id`
+  and `dep_id`.
+- `_cascade_parent_done`: missing `task_id` after approval → error naming
+  `task_id`; missing `parent_id` → error naming `task_id` and `parent_id`;
+  missing `sibling_id` in `parent.children` → error naming `parent_id` and
+  `sibling_id`.
+
 ## Changed files
 
 - `.ai-workflow/scripts/_tasks.py` — added `_unblock_dependent_tasks` and
