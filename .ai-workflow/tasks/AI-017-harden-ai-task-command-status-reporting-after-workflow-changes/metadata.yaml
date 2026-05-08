@@ -1,6 +1,6 @@
 id: "AI-017"
 title: "Harden ai_task command status reporting after workflow changes"
-status: "ready"
+status: "in_progress"
 risk: "medium"
 area:
   - workflow
