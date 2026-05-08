@@ -1,6 +1,6 @@
 id: "AI-016"
 title: "Cascade relationship updates when review completes a task"
-status: "ready_for_review"
+status: "changes_requested"
 risk: "medium"
 area:
   - workflow
