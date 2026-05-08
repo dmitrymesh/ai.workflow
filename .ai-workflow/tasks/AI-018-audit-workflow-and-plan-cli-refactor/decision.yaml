@@ -1,4 +1,5 @@
-decision: "pending"
-reviewer: null
-reviewed_at: null
-notes: ""
+﻿decision: changes_requested
+reviewer: codex
+reviewed_at: "2026-05-09"
+blocking_issues: 1
+next_status: changes_requested
