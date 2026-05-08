@@ -1,0 +1,22 @@
+id: "AI-018"
+title: "Audit workflow and plan CLI refactor"
+status: "draft"
+risk: "medium"
+area:
+  - workflow
+  - cli
+  - maintenance
+owner: null
+reviewer: null
+branch: "ai/AI-018-audit-workflow-and-plan-cli-refactor"
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related:
+  - AI-011
+  - AI-016
+created_at: "2026-05-08"
+updated_at: "2026-05-08"
