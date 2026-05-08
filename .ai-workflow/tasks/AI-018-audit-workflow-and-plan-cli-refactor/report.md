@@ -40,11 +40,8 @@ What makes it only *conditionally* ready:
    them. The reviewer must manually `git add` and `git commit` after running
    `review --approve`. This is documented in reviewer.md but not enforced by
    the CLI, creating a real risk of uncommitted reviewer artifacts.
-4. `config.yaml` has `workflow.mode: main_first` while the project is operating
-   in branch-first mode. This mismatches the docs and misleads any executor or
-   tool that reads the config key to decide how to behave.
 
-All four gaps are small, targeted fixes — none requires a broad rewrite.
+All three gaps are small, targeted fixes — none requires a broad rewrite.
 
 ---
 
@@ -82,22 +79,6 @@ helper). Allow `--no-commit` flag for environments where git is unavailable.
 
 ---
 
-### MEDIUM — `config.yaml` says `main_first`, project runs branch-first
-
-**File:** `.ai-workflow/config.yaml`, `workflow.mode`
-
-The value is `main_first` but all tasks since AI-012 use an `ai/` branch per
-task. The `list` command (which scans the working tree) is the "main_first"
-discovery path; `list-branches` is the branch-first path. Executor and manager
-skills correctly use `list-branches`, but the config mismatch can mislead tools
-that key off `workflow.mode` (e.g., future CI hooks or other executor runtimes).
-
-**Fix:** change `workflow.mode` to `branch_first` in `config.yaml` and verify
-all commands still behave correctly. Update the README quick-start example which
-still shows `list` as the discovery command.
-
----
-
 ### MEDIUM — no `approve <TASK-ID>` command for human approval from main
 
 **Files:** `manager.md`, `executor.md`, `README.md`
@@ -124,15 +105,16 @@ acceptable if the full auto is out of scope.
 
 The `list` command scans `tasks_root()` — the current branch's
 `.ai-workflow/tasks/` directory. In branch-first mode, tasks on separate
-unmerged branches are invisible to `list`. The README quick-start still
-shows `list` as the primary discovery command. Running `list` from a
-branch-first project shows only tasks merged into the current branch,
+unmerged branches are invisible to `list`. The README quick-start does not
+advertise `list` as the discovery command (it shows `create`, `move ready`,
+`claim`, `submit`, `board`), but the quick-start description lacks an explicit
+pointer to `list-branches` as the branch-first discovery path. Running `list`
+from a branch-first project shows only tasks merged into the current branch,
 not the full active backlog.
 
-**Fix:** update the README quick-start to use `list-branches` as the primary
-discovery command when `workflow.mode = branch_first`. Optionally have `list`
-print a warning when `workflow.mode = branch_first` and `list-branches` would
-return more results.
+**Fix:** add `list-branches` to the README quick-start as the branch-first
+discovery command. Optionally have `list` print a warning when
+`workflow.mode = branch_first` and `list-branches` would return more results.
 
 ---
 
@@ -258,21 +240,14 @@ reviewable PR.
 - **Validation:** `approve AI-NNN --print-only` prints correct commands;
   `approve AI-NNN` commits `ready` status to the task branch
 
-### AI-022 — Set `workflow.mode: branch_first` and update docs
-- **Scope:** `config.yaml`; README quick-start section; any docs that show
-  `list` as the primary discovery command.
-- **Risk:** low — config and doc change only; verify `validate` still passes
-- **Validation:** `config.yaml` `workflow.mode = branch_first`; README shows
-  `list-branches` in quick-start; `validate` passes
-
-### AI-023 — Deduplicate YAML parser (`_discovery.py` vs `_core.py`)
+### AI-022 — Deduplicate YAML parser (`_discovery.py` vs `_core.py`)
 - **Scope:** `_core.py` (add string-input variant); `_discovery.py` (remove
   local `_parse_yaml_string`, import from `_core`).
 - **Risk:** low — pure refactor, no behavior change; covered by existing tests
 - **Validation:** all `test_cascade.py` and `test_show.py` tests pass;
   `list-branches` and `show-branch` output unchanged
 
-### AI-024 — Add worktree pruning helper
+### AI-023 — Add worktree pruning helper
 - **Scope:** new `prune-worktrees` command (or README checklist update) that
   identifies worktrees whose branches are merged into main.
 - **Risk:** low — new command or doc-only change
@@ -283,9 +258,9 @@ reviewable PR.
 
 ## Assumptions
 
-- This audit treats the project as being in branch-first mode despite
-  `config.yaml` saying `main_first`. All observations are based on actual
-  observed behavior.
+- This audit treats the project as operating in branch-first mode.
+  `config.yaml` confirms `workflow.mode: branch_first`. All observations
+  are based on actual observed behavior.
 - AI-017 fix was confirmed merged to `main` via `list-branches` output but
   not yet visible in this AI-018 worktree.
 
