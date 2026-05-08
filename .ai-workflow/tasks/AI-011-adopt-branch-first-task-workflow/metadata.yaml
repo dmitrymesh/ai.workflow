@@ -1,6 +1,6 @@
 id: "AI-011"
 title: "Adopt branch-first task workflow"
-status: "ready"
+status: "done"
 risk: "high"
 area:
   - workflow
@@ -23,4 +23,4 @@ related:
   - AI-010
   - AI-016
 created_at: "2026-05-04"
-updated_at: "2026-05-05"
+updated_at: "2026-05-08"
