@@ -144,7 +144,7 @@ def show_task(args: argparse.Namespace) -> None:
         area_str = str(area) if area else "-"
 
     print(f"{meta.get('id', '?')}: {meta.get('title', task_dir.name)}")
-    print(f"  status:     {task_dir.parent.name}")
+    print(f"  status:     {meta.get('status') or task_dir.parent.name}")
     print(f"  risk:       {meta.get('risk', '-')}")
     print(f"  area:       {area_str}")
     print(f"  branch:     {meta.get('branch') or '-'}")
