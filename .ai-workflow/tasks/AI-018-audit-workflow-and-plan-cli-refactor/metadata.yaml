@@ -1,6 +1,6 @@
 id: "AI-018"
 title: "Audit workflow and plan CLI refactor"
-status: "changes_requested"
+status: "in_progress"
 risk: "medium"
 area:
   - workflow
