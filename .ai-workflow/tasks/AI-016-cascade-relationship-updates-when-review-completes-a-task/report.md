@@ -7,6 +7,11 @@ Approval now: (1) removes the completed task from every dependent task's
 `blocked_by` list and clears the completed task's `blocks` list; (2) walks
 the parent chain and auto-completes any ancestor whose children are all `done`.
 
+**Round-2 fix (changes_requested):** `_cascade_parent_done` now calls
+`_unblock_dependent_tasks` for each auto-completed parent before writing its
+metadata, so parents that block downstream tasks are fully cleaned up when they
+reach `done` through the cascade — not only when directly reviewed.
+
 ## Changed files
 
 - `.ai-workflow/scripts/_tasks.py` — added `_unblock_dependent_tasks` and

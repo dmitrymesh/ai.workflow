@@ -161,6 +161,7 @@ def _cascade_parent_done(task_id: str) -> list:
             return auto_done  # at least one sibling not done
 
     parent_meta["status"] = "done"
+    _unblock_dependent_tasks(parent_id, parent_meta)  # clears parent_meta["blocks"]
     save_meta(parent_dir, parent_meta)
     auto_done.append(parent_id)
     auto_done.extend(_cascade_parent_done(parent_id))

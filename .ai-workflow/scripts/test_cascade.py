@@ -102,6 +102,23 @@ class TestUnblockDownstream(_WorkflowBase):
         self.assertEqual(b["blocked_by"], [])
 
 
+class TestAutoCompletedParentUnblocks(_WorkflowBase):
+    def test_auto_completed_parent_unblocks_downstream(self) -> None:
+        """Auto-completing parent P (via final child C) must unblock D if P blocked D."""
+        _make_task(self.tasks_dir, "AI-P", "parent", "in_progress",
+                   children=["AI-C"], blocks=["AI-D"])
+        _make_task(self.tasks_dir, "AI-C", "child", "ready_for_review", parent="AI-P")
+        _make_task(self.tasks_dir, "AI-D", "downstream", "ready", blocked_by=["AI-P"])
+
+        _approve("AI-C")
+
+        p = _get_meta("AI-P")
+        d = _get_meta("AI-D")
+        self.assertEqual(p["status"], "done")
+        self.assertEqual(p["blocks"], [])
+        self.assertEqual(d["blocked_by"], [])
+
+
 class TestParentAutoCompletion(_WorkflowBase):
     def test_parent_closes_when_final_child_approved(self) -> None:
         """When the last in-flight child is approved, parent becomes done."""
