@@ -1,0 +1,22 @@
+id: "AI-017"
+title: "Harden ai_task command status reporting after workflow changes"
+status: "draft"
+risk: "medium"
+area:
+  - workflow
+  - cli
+  - maintenance
+owner: null
+reviewer: null
+branch: "ai/AI-017-harden-ai-task-command-status-reporting-after-workflow-changes"
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related:
+  - AI-016
+  - AI-011
+created_at: "2026-05-08"
+updated_at: "2026-05-08"

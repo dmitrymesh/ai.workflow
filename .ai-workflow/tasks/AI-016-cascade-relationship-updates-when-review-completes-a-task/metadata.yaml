@@ -17,5 +17,6 @@ blocked_by: []
 related:
   - AI-011
   - AI-001
+  - AI-017
 created_at: "2026-05-05"
 updated_at: "2026-05-08"
