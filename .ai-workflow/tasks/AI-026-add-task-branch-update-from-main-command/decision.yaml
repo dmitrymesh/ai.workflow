@@ -1,4 +1,4 @@
-decision: "changes_requested"
+decision: "approve"
 reviewer: "codex"
 reviewed_at: "2026-05-10"
-notes: "Workflow mode guard must treat missing workflow.mode as main_first per protocol defaults."
+notes: "All requested runtime and workflow-mode fixes are complete; validation and focused tests passed."

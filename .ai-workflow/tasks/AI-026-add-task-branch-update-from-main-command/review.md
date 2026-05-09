@@ -2,35 +2,34 @@
 
 ## Decision
 
-changes_requested
+approve
 
 ## Blocking Issues
 
-1. `.ai-workflow/scripts/_update_from_main.py:219` defaults missing `workflow.mode` to `branch_first`. The protocol docs define the default as `main_first` (`.ai-workflow/README.md`, config keys table; `config.yaml` also comments "main_first" as current default). In a legacy project with no `workflow.mode`, `update-from-main` would run instead of clearly reporting unsupported `main_first` behavior. Change the fallback to `main_first` and add a test for an empty workflow config (`{}`) being rejected.
+None.
 
 ## Non-Blocking Issues
 
-- The previous runtime crash in `--all` is fixed: `_read_task_meta_from_branch` is now called with `(branch, task_id)`.
-- The active-status filtering now works in a live dry-run and reports inactive `done` branches separately.
+- The command uses the local `main` branch as its source; the docs/report note users should fetch first when remote freshness matters.
 
 ## Scope Check
 
-The changed files remain within the allowed CLI, documentation, tests, and task artifact scope. No forbidden file patterns were changed.
+Changes are limited to the workflow CLI, focused tests, README/executor guidance, and task artifacts. No forbidden file patterns were changed.
 
 ## Acceptance Criteria Check
 
-- Single-task dry-run works.
-- `--all` dry-run now runs successfully and filters inactive `done` branches.
-- Dirty, already-current, merged, conflict, and inactive reporting are covered by tests or smoke output.
-- The `main_first` guard works only when config explicitly says `main_first`; it still fails the default/no-mode compatibility case.
+- Single-task dry-run works and targets only the requested task branch.
+- `--all` dry-run works and scans local task branches.
+- Bulk selection skips merged branches, branches without worktrees, dirty worktrees, and inactive `done` branches.
+- Workflow mode guard rejects explicit `main_first` and missing-mode configs.
+- Conflict handling is tested and documented as report-and-exit-nonzero after summary.
+- README and executor guidance document the command.
 - `validate` passes.
 
 ## Test Quality
 
-I ran `validate`, `python -m unittest test_update_from_main -v`, `update-from-main --all`, `update-from-main AI-022`, and `git diff --check`. Add the missing empty-config workflow mode test.
+I ran `validate`, `python -m unittest test_update_from_main -v` (29/29), `update-from-main --all`, `update-from-main AI-022`, and `git diff --check`. The tests now cover active-status filtering, two-argument metadata lookup, explicit `main_first`, empty-config default behavior, dirty worktrees, conflicts, and selection rules.
 
 ## Required Fixes
 
-- Change the workflow mode fallback from `branch_first` to `main_first`.
-- Add a unit test that `_parse_workflow_config()` returning `{}` causes `update-from-main` to exit with a clear unsupported-mode error.
-- Re-run the unit tests and live dry-run smoke test.
+None.
