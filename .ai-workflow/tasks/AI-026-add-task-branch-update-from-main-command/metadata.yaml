@@ -1,6 +1,6 @@
 id: "AI-026"
 title: "Add task branch update from main command"
-status: "in_progress"
+status: "ready_for_review"
 risk: "high"
 area:
   - workflow
