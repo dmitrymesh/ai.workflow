@@ -1,0 +1,4 @@
+decision: "approve"
+reviewer: "codex"
+reviewed_at: "2026-05-10"
+notes: "Previous approval safety blockers were fixed; validation passed."
