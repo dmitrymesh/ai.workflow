@@ -1,4 +1,4 @@
 decision: "changes_requested"
 reviewer: "codex"
 reviewed_at: "2026-05-10"
-notes: "Bulk update must filter by active task status and main_first mode must fail clearly."
+notes: "Second review: --all crashes from helper signature mismatch, and workflow.mode guard uses the wrong config shape."

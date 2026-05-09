@@ -6,36 +6,40 @@ changes_requested
 
 ## Blocking Issues
 
-1. `.ai-workflow/scripts/_update_from_main.py:231-238` implements `--all` by scanning every local task branch with the configured prefix and passing each one to `_process_branch`. `_process_branch` only skips branches already merged into `main`; it never reads task metadata or filters by active status. The task contract requires bulk updates to target "active unmerged task branches" and forbids updating merged task branches, but a reviewed `done` or `rejected` branch that has not yet been merged into `main` is not active and would still be eligible for merge if it has a local worktree. Filter `--all` selection by metadata status (`draft`, `ready`, `in_progress`, `ready_for_review`, `changes_requested`) and add tests for done/rejected unmerged branches.
+1. `.ai-workflow/scripts/_update_from_main.py:252` calls `_read_task_meta_from_branch(branch)` with one argument, but `.ai-workflow/scripts/_discovery.py:239` defines `_read_task_meta_from_branch(branch, task_id)`. The real `update-from-main --all` command now crashes before producing a summary:
 
-2. `.ai-workflow/scripts/_update_from_main.py:202-219` does not check `workflow.mode`. The task requires the command to work in `branch_first` and, if unsupported in `main_first`, report that clearly. In a `main_first` project the command currently proceeds with branch scanning and may produce misleading "no branch" or empty-scan output instead of a clear unsupported-mode error. Add an explicit workflow mode check and focused test coverage.
+   ```text
+   TypeError: _read_task_meta_from_branch() missing 1 required positional argument: 'task_id'
+   ```
+
+   This breaks the `--all` acceptance criteria and was missed because the unit test mocks `_read_task_meta_from_branch` with a one-argument-compatible mock. Pass the extracted `tid` into the helper and add a test that asserts the helper is called with both `branch` and `task_id`.
+
+2. `.ai-workflow/scripts/_update_from_main.py:218` still does not correctly enforce `workflow.mode`. `_parse_workflow_config()` returns the workflow block directly, e.g. `{"mode": "branch_first", "discovery": ...}`, but the code reads `cfg.get("workflow", {}).get("mode", "branch_first")`. That always falls back to `branch_first` for the real config shape, so `main_first` would not be rejected clearly as required. Use `cfg.get("mode", "main_first" or appropriate default)` consistently with `_discovery_cfg`, and update the tests to mock the real config shape (`{"mode": "main_first"}`), not `{"workflow": {"mode": ...}}`.
 
 ## Non-Blocking Issues
 
-- `.ai-workflow/scripts/_update_from_main.py:236-238` continues processing later branches after a conflict in `--all` mode and only exits nonzero at the end. The README says the command "stops" on conflicts. Consider either stopping immediately after the first conflict in apply mode or updating the wording if continuing to summarize other branches is intentional and safe.
+- The conflict behavior mismatch was addressed by updating the README wording to match the current implementation.
 
 ## Scope Check
 
-The changed files are in the allowed CLI, documentation, tests, and task artifact scope. No forbidden file patterns were changed.
+The changed files remain within the allowed CLI, documentation, tests, and task artifact scope. No forbidden file patterns were changed.
 
 ## Acceptance Criteria Check
 
-- Single-task dry-run/apply path is implemented.
-- `--all` exists and is explicit, but it does not yet limit selection to active task statuses.
-- Dirty worktrees are skipped.
-- Already-current branches are reported.
-- Conflicts are reported and return nonzero, but the bulk command does not currently stop immediately.
-- Merged branches are skipped.
-- README and executor guidance document the workflow.
-- Focused tests exist, but they do not cover status-based active filtering or `main_first` unsupported behavior.
-- `validate` passes.
+- Single-task path remains implemented.
+- `--all` currently fails at runtime due to the helper signature mismatch.
+- Dirty worktree, already-current, merged-branch, and conflict reporting behavior have tests.
+- Active-status filtering was attempted but is not functional in the real command until the `task_id` argument is passed.
+- `main_first` unsupported behavior was attempted but does not work against the real config parser shape.
+- `validate` passes, but the live `update-from-main --all` smoke test fails.
 
 ## Test Quality
 
-I ran `python .ai-workflow/scripts/ai_task.py validate`, `python -m unittest test_update_from_main -v`, `update-from-main --help`, `update-from-main --all` dry-run, and `git diff --check main...HEAD`. The existing unit tests pass, but they miss the two blocking contract cases above.
+I ran `validate`, inspected the real `_parse_workflow_config()` output, and ran `update-from-main --all`. The new unit tests need to stop masking the real helper signature and real workflow config shape.
 
 ## Required Fixes
 
-- Filter `--all` candidates to active task statuses by reading branch metadata, and skip/report `done` and `rejected` unmerged task branches.
-- Add tests for `--all` excluding unmerged `done` and `rejected` branches.
-- Add an explicit `workflow.mode` check so `main_first` reports unsupported clearly, plus a test for that path.
+- Fix `_read_task_meta_from_branch` usage in `--all` by passing both `branch` and `task_id`.
+- Correct the workflow mode check against the actual `_parse_workflow_config()` return shape.
+- Update tests so they would fail for both regressions above.
+- Re-run `python .ai-workflow/scripts/ai_task.py update-from-main --all` as a real smoke test and record the result.
