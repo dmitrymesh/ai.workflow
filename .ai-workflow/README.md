@@ -593,7 +593,10 @@ Each step below represents a mandatory commit to the task branch.
            ↓
        manager commits task.md + metadata.yaml (status: draft)
            ↓
-[human] reviews task.md; runs: move AI-NNN ready
+[main] manager returns to main (git checkout main)
+       task branch is source of truth; main is the control plane
+           ↓
+[human] reviews task.md; runs: approve AI-NNN (from main checkout)
            ↓
        commit: metadata.yaml (status: ready)
            ↓
@@ -633,8 +636,15 @@ When `workflow.mode = branch_first`:
 
 1. The manager creates a task branch from `main`: `git checkout -b ai/AI-NNN-slug`.
 2. The manager creates the task folder (`task.md`, `metadata.yaml` with `status: draft`) in that branch and commits it.
-3. The task branch is pushed to the remote (if `integration.mode = pull_request`) or left local (if `local_merge`).
-4. The manager does **not** commit the task folder to `main`.
+3. The manager returns the shared checkout to `main`: `git checkout main`. The task branch is the source of truth for all active task artifacts; `main` is the control plane.
+4. The task branch is pushed to the remote (if `integration.mode = pull_request`) or left local (if `local_merge`).
+5. The manager does **not** commit the task folder to `main`.
+
+Human approval is performed from the `main` checkout via `approve`:
+
+```bash
+python .ai-workflow/scripts/ai_task.py approve AI-NNN
+```
 
 #### Task ID uniqueness strategy
 

@@ -117,12 +117,21 @@ python .ai-workflow/scripts/ai_task.py create "Task title" --risk medium --area 
 git add .ai-workflow/tasks/AI-NNN-slug/
 git commit -m "feat: AI-NNN | draft task contract"
 
-# 4. Push the branch if using pull_request integration
+# 4. Return to main — task artifacts live on the task branch;
+#    main remains the control plane for approval and coordination
+git checkout main
+
+# 5. (If using pull_request integration) Push the task branch
 git push -u origin ai/AI-NNN-slug
 ```
 
+The task folder is committed to the task branch, not to `main`. After returning
+to `main`, the task branch is the authoritative source of truth for all active
+task artifacts. The shared checkout on `main` is ready for the next task or for
+human approval.
+
 Leave the task in `draft` and report that human approval is needed. The manager
-does **not** move the task to `ready`. The human approves from the main checkout:
+does **not** move the task to `ready`. The human approves from the `main` checkout:
 
 ```bash
 # Recommended: approve in one step from the main checkout
@@ -133,8 +142,8 @@ python .ai-workflow/scripts/ai_task.py approve AI-NNN --print-only
 ```
 
 `approve` locates the task branch, updates `metadata.yaml` status to `ready`,
-and commits the change to the task branch via a temporary worktree — no manual
-`cd` into the branch required.
+and commits the change to the task branch — no manual `cd` into the branch
+required. The human stays on `main` throughout.
 
 After the approval is committed to the task branch, it becomes visible to
 executors via `list-branches`.
