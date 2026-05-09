@@ -32,19 +32,24 @@ Usage:
   python .ai-workflow/scripts/ai_task.py history --show AI-005
   python .ai-workflow/scripts/ai_task.py list-branches
   python .ai-workflow/scripts/ai_task.py show-branch AI-001
+  python .ai-workflow/scripts/ai_task.py update-from-main AI-001
+  python .ai-workflow/scripts/ai_task.py update-from-main AI-001 --apply
+  python .ai-workflow/scripts/ai_task.py update-from-main --all
+  python .ai-workflow/scripts/ai_task.py update-from-main --all --apply
 
 Module layout (all under .ai-workflow/scripts/):
-  _core.py          constants, path utils, YAML, config, task discovery, relationship utils
-  _board.py         generate_board, list_tasks
-  _validate.py      validate
-  _tasks.py         create_task, move_task, submit_task, review_task, human_request_changes, print_task_path
-  _relationships.py link_tasks, unlink_tasks, show_task
-  _worktree.py      prepare_worktree, claim_task
-  _migrate.py       migrate
-  _install.py       install_plan
-  _history.py       history
-  _discovery.py     list_branches, show_branch  (branch-first task discovery)
-  ai_task.py        init, build_parser, main  (this file — CLI entrypoint only)
+  _core.py               constants, path utils, YAML, config, task discovery, relationship utils
+  _board.py              generate_board, list_tasks
+  _validate.py           validate
+  _tasks.py              create_task, move_task, submit_task, review_task, human_request_changes, print_task_path
+  _relationships.py      link_tasks, unlink_tasks, show_task
+  _worktree.py           prepare_worktree, claim_task
+  _migrate.py            migrate
+  _install.py            install_plan
+  _history.py            history
+  _discovery.py          list_branches, show_branch  (branch-first task discovery)
+  _update_from_main.py   update_from_main  (merge main into active task branch worktrees)
+  ai_task.py             init, build_parser, main  (this file — CLI entrypoint only)
 """
 
 from __future__ import annotations
@@ -62,6 +67,7 @@ from _relationships import link_tasks, show_task, unlink_tasks
 from _tasks import create_task, human_request_changes, move_task, print_task_path, review_task, submit_task
 from _validate import validate
 from _discovery import list_branches, show_branch
+from _update_from_main import update_from_main
 from _worktree import claim_task, prepare_worktree
 
 
@@ -287,6 +293,33 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_show_branch.add_argument("task_id", help="Task ID to look up (e.g. AI-013)")
     p_show_branch.set_defaults(func=show_branch)
+
+    p_update = sub.add_parser(
+        "update-from-main",
+        help=(
+            "Merge main into active task branch worktrees. "
+            "Default is dry-run; use --apply to perform merges. "
+            "Specify a task ID or --all for bulk update."
+        ),
+    )
+    p_update.add_argument(
+        "task_id",
+        nargs="?",
+        default=None,
+        help="Task ID to update (e.g. AI-026). Mutually exclusive with --all.",
+    )
+    p_update.add_argument(
+        "--all",
+        action="store_true",
+        dest="update_all",
+        help="Update all active unmerged task branches that have local worktrees.",
+    )
+    p_update.add_argument(
+        "--apply",
+        action="store_true",
+        help="Actually perform merges (default: dry-run, reports what would happen).",
+    )
+    p_update.set_defaults(func=update_from_main)
 
     return parser
 

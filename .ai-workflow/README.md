@@ -431,6 +431,45 @@ python .ai-workflow/scripts/ai_task.py review AI-003 --approve
 python .ai-workflow/scripts/ai_task.py review AI-003 --changes-requested
 ```
 
+### update-from-main command
+
+As other tasks complete and merge into `main`, active task branches become
+stale. Use `update-from-main` to merge `main` into task branch worktrees
+without switching your main checkout:
+
+```bash
+# Dry-run: report what would happen (no branches modified)
+python .ai-workflow/scripts/ai_task.py update-from-main AI-003
+python .ai-workflow/scripts/ai_task.py update-from-main --all
+
+# Apply: merge main into the worktree(s)
+python .ai-workflow/scripts/ai_task.py update-from-main AI-003 --apply
+python .ai-workflow/scripts/ai_task.py update-from-main --all --apply
+```
+
+**What the command does:**
+
+- **Single task**: targets the specified task's local branch/worktree only.
+- **`--all`**: scans all local task branches and processes those that are
+  active (not merged into `main`) and have a local worktree.
+- **Dry-run** (default): reports which branches would be updated, already
+  current, or skipped — no git changes are made.
+- **`--apply`**: runs `git merge main` inside each eligible worktree.
+
+**Safety rules:**
+
+- Merged task branches are always skipped.
+- Dirty worktrees (uncommitted changes) are skipped and reported.
+- Already-current branches are reported without creating empty commits.
+- Merge conflicts leave the worktree in a normal conflict state for manual
+  resolution; the command reports the path and stops.
+- The main checkout branch is never changed.
+
+**When to use:**
+
+Run before starting new work in a task worktree, or periodically during long
+tasks to incorporate upstream fixes and reduce conflict risk at merge time.
+
 ### Cleanup
 
 After a task is accepted and merged:

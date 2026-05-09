@@ -1,0 +1,280 @@
+"""Focused tests for update-from-main command (AI-026).
+
+Covers target selection, safety checks, and outcome reporting.
+All git subprocess calls are mocked so no real git repo is required.
+"""
+from __future__ import annotations
+
+import argparse
+import io
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, call, patch
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from _update_from_main import (
+    _UpdateResult,
+    _commits_main_ahead,
+    _find_worktree_for_branch,
+    _is_worktree_dirty,
+    _merge_main,
+    _process_branch,
+    update_from_main,
+)
+
+# Convenience: a fake root path used across tests
+_ROOT = Path("/fake/repo")
+_WT = Path("/fake/repo.worktrees/AI-001-task")
+
+# Porcelain output for a worktree on branch ai/AI-001-task
+_PORCELAIN_WITH_WT = (
+    "worktree /fake/repo\n"
+    "HEAD abc\n"
+    "branch refs/heads/main\n"
+    "\n"
+    f"worktree {_WT}\n"
+    "HEAD def\n"
+    "branch refs/heads/ai/AI-001-task\n"
+)
+
+_PORCELAIN_NO_WT = (
+    "worktree /fake/repo\n"
+    "HEAD abc\n"
+    "branch refs/heads/main\n"
+)
+
+
+# ---------------------------------------------------------------------------
+# _find_worktree_for_branch
+# ---------------------------------------------------------------------------
+
+class TestFindWorktreeForBranch(unittest.TestCase):
+    def test_returns_path_when_branch_has_worktree(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(True, _PORCELAIN_WITH_WT)):
+            result = _find_worktree_for_branch("ai/AI-001-task", _ROOT)
+        self.assertEqual(result, _WT)
+
+    def test_returns_none_when_branch_has_no_worktree(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(True, _PORCELAIN_NO_WT)):
+            result = _find_worktree_for_branch("ai/AI-001-task", _ROOT)
+        self.assertIsNone(result)
+
+    def test_returns_none_when_git_fails(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(False, "")):
+            result = _find_worktree_for_branch("ai/AI-001-task", _ROOT)
+        self.assertIsNone(result)
+
+
+# ---------------------------------------------------------------------------
+# _is_worktree_dirty
+# ---------------------------------------------------------------------------
+
+class TestIsWorktreeDirty(unittest.TestCase):
+    def test_dirty_when_status_non_empty(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(True, " M somefile.py")):
+            self.assertTrue(_is_worktree_dirty(_WT))
+
+    def test_clean_when_status_empty(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(True, "")):
+            self.assertFalse(_is_worktree_dirty(_WT))
+
+    def test_dirty_when_git_fails(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(False, "")):
+            self.assertTrue(_is_worktree_dirty(_WT))
+
+
+# ---------------------------------------------------------------------------
+# _commits_main_ahead
+# ---------------------------------------------------------------------------
+
+class TestCommitsMainAhead(unittest.TestCase):
+    def test_returns_count(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(True, "3")):
+            self.assertEqual(_commits_main_ahead("ai/AI-001-task", _ROOT), 3)
+
+    def test_returns_zero_when_up_to_date(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(True, "0")):
+            self.assertEqual(_commits_main_ahead("ai/AI-001-task", _ROOT), 0)
+
+    def test_returns_minus_one_on_git_failure(self) -> None:
+        with patch("_update_from_main._run_git", return_value=(False, "error")):
+            self.assertEqual(_commits_main_ahead("ai/AI-001-task", _ROOT), -1)
+
+
+# ---------------------------------------------------------------------------
+# _merge_main
+# ---------------------------------------------------------------------------
+
+class TestMergeMain(unittest.TestCase):
+    def test_success(self) -> None:
+        mock_result = MagicMock(returncode=0, stdout="Already up to date.", stderr="")
+        with patch("_update_from_main.subprocess.run", return_value=mock_result):
+            ok, msg = _merge_main(_WT)
+        self.assertTrue(ok)
+        self.assertIn("Already up to date", msg)
+
+    def test_conflict(self) -> None:
+        mock_result = MagicMock(returncode=1, stdout="CONFLICT (content)", stderr="Automatic merge failed")
+        with patch("_update_from_main.subprocess.run", return_value=mock_result):
+            ok, msg = _merge_main(_WT)
+        self.assertFalse(ok)
+        self.assertIn("CONFLICT", msg)
+
+    def test_git_not_found(self) -> None:
+        with patch("_update_from_main.subprocess.run", side_effect=FileNotFoundError()):
+            ok, msg = _merge_main(_WT)
+        self.assertFalse(ok)
+        self.assertIn("not available", msg)
+
+
+# ---------------------------------------------------------------------------
+# _process_branch — target selection and safety checks
+# ---------------------------------------------------------------------------
+
+class TestProcessBranch(unittest.TestCase):
+
+    def _run(self, branch, task_id, apply, *, merged=False, worktree=_WT,
+             ahead=2, dirty=False, merge_ok=True):
+        """Run _process_branch with controllable sub-results."""
+        merged_set = ({branch} if merged else set(), set())
+        with patch("_update_from_main._merged_into_main", return_value=merged_set), \
+             patch("_update_from_main._find_worktree_for_branch",
+                   return_value=worktree), \
+             patch("_update_from_main._commits_main_ahead", return_value=ahead), \
+             patch("_update_from_main._is_worktree_dirty", return_value=dirty), \
+             patch("_update_from_main._merge_main",
+                   return_value=(merge_ok, "ok" if merge_ok else "CONFLICT details")):
+            return _process_branch(branch, task_id, _ROOT, apply)
+
+    def test_skips_merged_branch(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, merged=True)
+        self.assertEqual(r.outcome, "skipped_merged")
+
+    def test_skips_branch_without_worktree(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, worktree=None)
+        self.assertEqual(r.outcome, "skipped_no_worktree")
+
+    def test_already_current_when_zero_ahead(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, ahead=0)
+        self.assertEqual(r.outcome, "already_current")
+
+    def test_error_when_rev_list_fails(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, ahead=-1)
+        self.assertEqual(r.outcome, "error")
+
+    def test_skips_dirty_worktree(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, dirty=True)
+        self.assertEqual(r.outcome, "skipped_dirty")
+
+    def test_dry_run_when_not_apply(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=False)
+        self.assertEqual(r.outcome, "dry_run")
+        self.assertIn("--apply", r.detail)
+
+    def test_updated_on_successful_merge(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, merge_ok=True)
+        self.assertEqual(r.outcome, "updated")
+
+    def test_conflict_on_failed_merge(self) -> None:
+        r = self._run("ai/AI-001-task", "AI-001", apply=True, merge_ok=False)
+        self.assertEqual(r.outcome, "conflict")
+        self.assertIn("resolve manually", r.detail)
+
+    def test_dirty_check_before_dry_run(self) -> None:
+        """Dirty worktrees are skipped even without --apply."""
+        r = self._run("ai/AI-001-task", "AI-001", apply=False, dirty=True)
+        self.assertEqual(r.outcome, "skipped_dirty")
+
+
+# ---------------------------------------------------------------------------
+# update_from_main handler
+# ---------------------------------------------------------------------------
+
+class TestUpdateFromMainHandler(unittest.TestCase):
+    """Integration-level tests for the CLI handler."""
+
+    def _make_args(self, task_id=None, update_all=False, apply=False):
+        return argparse.Namespace(task_id=task_id, update_all=update_all, apply=apply)
+
+    def _run_handler(self, args):
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"),         # rev-parse --git-dir
+            (True, "abc123"),        # rev-parse --verify main
+        ]):
+            with patch("_update_from_main.repo_root", return_value=_ROOT), \
+                 patch("_update_from_main._find_branch_for_task",
+                       return_value="ai/AI-001-task"), \
+                 patch("_update_from_main._process_branch",
+                       return_value=_UpdateResult("ai/AI-001-task", "AI-001",
+                                                  "dry_run", "2 commits pending")), \
+                 patch("sys.stdout", new_callable=io.StringIO):
+                update_from_main(args)
+
+    def test_requires_task_id_or_all(self) -> None:
+        args = self._make_args()
+        with self.assertRaises(SystemExit):
+            with patch("_update_from_main._run_git", return_value=(True, "")):
+                update_from_main(args)
+
+    def test_task_id_and_all_mutually_exclusive(self) -> None:
+        args = self._make_args(task_id="AI-001", update_all=True)
+        with self.assertRaises(SystemExit):
+            with patch("_update_from_main._run_git", return_value=(True, "")):
+                update_from_main(args)
+
+    def test_single_task_runs_process_branch(self) -> None:
+        args = self._make_args(task_id="AI-001")
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._find_branch_for_task",
+                   return_value="ai/AI-001-task") as mock_find, \
+             patch("_update_from_main._process_branch",
+                   return_value=_UpdateResult("ai/AI-001-task", "AI-001",
+                                              "dry_run", "detail")) as mock_proc, \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
+        mock_find.assert_called_once_with("AI-001")
+        mock_proc.assert_called_once()
+
+    def test_all_scans_local_branches(self) -> None:
+        branches = ["ai/AI-001-task", "ai/AI-002-other"]
+        args = self._make_args(update_all=True)
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._list_local_branches",
+                   return_value=branches), \
+             patch("_update_from_main._process_branch",
+                   side_effect=[
+                       _UpdateResult("ai/AI-001-task", "AI-001", "dry_run", ""),
+                       _UpdateResult("ai/AI-002-other", "AI-002", "skipped_merged", ""),
+                   ]) as mock_proc, \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
+        self.assertEqual(mock_proc.call_count, 2)
+
+    def test_exits_nonzero_on_conflict(self) -> None:
+        args = self._make_args(task_id="AI-001", apply=True)
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._find_branch_for_task",
+                   return_value="ai/AI-001-task"), \
+             patch("_update_from_main._process_branch",
+                   return_value=_UpdateResult("ai/AI-001-task", "AI-001",
+                                              "conflict", "resolve manually")), \
+             patch("sys.stdout", new_callable=io.StringIO):
+            with self.assertRaises(SystemExit) as cm:
+                update_from_main(args)
+        self.assertEqual(cm.exception.code, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

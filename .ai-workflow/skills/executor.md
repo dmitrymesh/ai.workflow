@@ -118,6 +118,21 @@ cd <printed worktree path>
 git branch --show-current   # must match metadata.yaml.branch
 ```
 
+**Keeping the task branch current:**
+
+As other tasks merge into `main`, the task branch may fall behind. Merge
+`main` into the worktree before starting long work or when upstream changes
+are needed:
+
+```bash
+# From the main checkout — dry-run first, then apply:
+python .ai-workflow/scripts/ai_task.py update-from-main <TASK-ID>
+python .ai-workflow/scripts/ai_task.py update-from-main <TASK-ID> --apply
+```
+
+The command refuses dirty worktrees and reports conflicts without
+auto-resolving them.
+
 **Continuing in either mode (steps apply to both):**
 
 1. Implement the task according to `task.md`.
