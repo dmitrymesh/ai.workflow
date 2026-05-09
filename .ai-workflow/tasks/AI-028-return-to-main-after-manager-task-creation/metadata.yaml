@@ -1,6 +1,6 @@
 id: "AI-028"
 title: "Return to main after manager task creation"
-status: "ready"
+status: "in_progress"
 risk: "low"
 area:
   - workflow
