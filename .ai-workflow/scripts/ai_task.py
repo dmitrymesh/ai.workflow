@@ -32,6 +32,8 @@ Usage:
   python .ai-workflow/scripts/ai_task.py history --show AI-005
   python .ai-workflow/scripts/ai_task.py list-branches
   python .ai-workflow/scripts/ai_task.py show-branch AI-001
+  python .ai-workflow/scripts/ai_task.py approve AI-001
+  python .ai-workflow/scripts/ai_task.py approve AI-001 --print-only
 
 Module layout (all under .ai-workflow/scripts/):
   _core.py          constants, path utils, YAML, config, task discovery, relationship utils
@@ -44,6 +46,7 @@ Module layout (all under .ai-workflow/scripts/):
   _install.py       install_plan
   _history.py       history
   _discovery.py     list_branches, show_branch  (branch-first task discovery)
+  _approve.py       approve_task  (human-facing approve: draft -> ready on task branch)
   ai_task.py        init, build_parser, main  (this file — CLI entrypoint only)
 """
 
@@ -53,15 +56,16 @@ import argparse
 
 from pathlib import Path
 
+from _approve import approve_task
 from _board import generate_board, list_tasks
 from _core import RELATIONSHIP_KINDS, STATUSES, ensure_structure, load_config, update_config_profile, workflow_root
+from _discovery import list_branches, show_branch
 from _history import history
 from _install import install_plan
 from _migrate import migrate
 from _relationships import link_tasks, show_task, unlink_tasks
 from _tasks import create_task, human_request_changes, move_task, print_task_path, review_task, submit_task
 from _validate import validate
-from _discovery import list_branches, show_branch
 from _worktree import claim_task, prepare_worktree
 
 
@@ -287,6 +291,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_show_branch.add_argument("task_id", help="Task ID to look up (e.g. AI-013)")
     p_show_branch.set_defaults(func=show_branch)
+
+    p_approve = sub.add_parser(
+        "approve",
+        help=(
+            "Human approve: move a draft task to ready on the task branch, "
+            "from the main/control-plane checkout. Use --print-only to preview commands."
+        ),
+    )
+    p_approve.add_argument("task_id", help="Task ID to approve (e.g. AI-021)")
+    p_approve.add_argument(
+        "--print-only",
+        action="store_true",
+        help="Print the git commands instead of running them",
+    )
+    p_approve.set_defaults(func=approve_task)
 
     return parser
 

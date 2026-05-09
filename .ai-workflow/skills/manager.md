@@ -122,16 +122,22 @@ git push -u origin ai/AI-NNN-slug
 ```
 
 Leave the task in `draft` and report that human approval is needed. The manager
-does **not** move the task to `ready`. The human runs:
+does **not** move the task to `ready`. The human approves from the main checkout:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py move AI-NNN ready
-git add .ai-workflow/tasks/AI-NNN-slug/metadata.yaml
-git commit -m "chore: AI-NNN | approve task to ready"
+# Recommended: approve in one step from the main checkout
+python .ai-workflow/scripts/ai_task.py approve AI-NNN
+
+# Or preview the exact git commands first
+python .ai-workflow/scripts/ai_task.py approve AI-NNN --print-only
 ```
 
-After the human commits the `ready` status to the task branch, it becomes
-visible to executors via `list-branches`.
+`approve` locates the task branch, updates `metadata.yaml` status to `ready`,
+and commits the change to the task branch via a temporary worktree — no manual
+`cd` into the branch required.
+
+After the approval is committed to the task branch, it becomes visible to
+executors via `list-branches`.
 
 **Note:** In the legacy `main_first` mode (`workflow.mode: main_first`), tasks
 are created directly in `main` via `create` and committed there. The executor
