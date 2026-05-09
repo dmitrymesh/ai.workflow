@@ -313,6 +313,17 @@ class TestUpdateFromMainHandler(unittest.TestCase):
             update_from_main(args)
         self.assertNotEqual(cm.exception.code, 0)
 
+    def test_empty_config_rejected(self) -> None:
+        """No workflow.mode in config must also be rejected (default is main_first)."""
+        args = self._make_args(task_id="AI-001")
+        with self.assertRaises(SystemExit) as cm, \
+             patch("_update_from_main._run_git", side_effect=[
+                 (True, ".git"), (True, "abc123"),
+             ]), \
+             patch("_update_from_main._parse_workflow_config", return_value={}):
+            update_from_main(args)
+        self.assertNotEqual(cm.exception.code, 0)
+
     def test_exits_nonzero_on_conflict(self) -> None:
         args = self._make_args(task_id="AI-001", apply=True)
         with patch("_update_from_main._run_git", side_effect=[

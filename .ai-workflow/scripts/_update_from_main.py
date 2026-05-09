@@ -216,7 +216,7 @@ def update_from_main(args: argparse.Namespace) -> None:
         raise SystemExit("Error: 'main' branch not found.")
 
     cfg = _parse_workflow_config()
-    mode = cfg.get("mode", "branch_first")
+    mode = cfg.get("mode", "main_first")
     if mode != "branch_first":
         raise SystemExit(
             f"Error: update-from-main is only supported in branch_first workflow mode "
