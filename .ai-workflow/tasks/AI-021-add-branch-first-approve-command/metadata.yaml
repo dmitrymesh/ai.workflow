@@ -1,0 +1,20 @@
+id: "AI-021"
+title: "Add branch-first approve command"
+status: "done"
+risk: "medium"
+area:
+  - workflow
+  - cli
+  - git
+owner: null
+reviewer: null
+branch: "ai/AI-021-add-branch-first-approve-command"
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related: []
+created_at: "2026-05-09"
+updated_at: "2026-05-10"

@@ -431,6 +431,46 @@ python .ai-workflow/scripts/ai_task.py review AI-003 --approve
 python .ai-workflow/scripts/ai_task.py review AI-003 --changes-requested
 ```
 
+### update-from-main command
+
+As other tasks complete and merge into `main`, active task branches become
+stale. Use `update-from-main` to merge `main` into task branch worktrees
+without switching your main checkout:
+
+```bash
+# Dry-run: report what would happen (no branches modified)
+python .ai-workflow/scripts/ai_task.py update-from-main AI-003
+python .ai-workflow/scripts/ai_task.py update-from-main --all
+
+# Apply: merge main into the worktree(s)
+python .ai-workflow/scripts/ai_task.py update-from-main AI-003 --apply
+python .ai-workflow/scripts/ai_task.py update-from-main --all --apply
+```
+
+**What the command does:**
+
+- **Single task**: targets the specified task's local branch/worktree only.
+- **`--all`**: scans all local task branches and processes those that are
+  active (not merged into `main`) and have a local worktree.
+- **Dry-run** (default): reports which branches would be updated, already
+  current, or skipped — no git changes are made.
+- **`--apply`**: runs `git merge main` inside each eligible worktree.
+
+**Safety rules:**
+
+- Merged task branches are always skipped.
+- Dirty worktrees (uncommitted changes) are skipped and reported.
+- Already-current branches are reported without creating empty commits.
+- Merge conflicts leave the worktree in a normal conflict state for manual
+  resolution; the command reports the conflict, continues processing remaining
+  branches (with `--all`), and exits with a non-zero status at the end.
+- The main checkout branch is never changed.
+
+**When to use:**
+
+Run before starting new work in a task worktree, or periodically during long
+tasks to incorporate upstream fixes and reduce conflict risk at merge time.
+
 ### Cleanup
 
 After a task is accepted and merged:
@@ -593,7 +633,10 @@ Each step below represents a mandatory commit to the task branch.
            ↓
        manager commits task.md + metadata.yaml (status: draft)
            ↓
-[human] reviews task.md; runs: move AI-NNN ready
+[main] manager returns to main (git checkout main)
+       task branch is source of truth; main is the control plane
+           ↓
+[human] reviews task.md; runs: approve AI-NNN (from main checkout)
            ↓
        commit: metadata.yaml (status: ready)
            ↓
@@ -633,8 +676,15 @@ When `workflow.mode = branch_first`:
 
 1. The manager creates a task branch from `main`: `git checkout -b ai/AI-NNN-slug`.
 2. The manager creates the task folder (`task.md`, `metadata.yaml` with `status: draft`) in that branch and commits it.
-3. The task branch is pushed to the remote (if `integration.mode = pull_request`) or left local (if `local_merge`).
-4. The manager does **not** commit the task folder to `main`.
+3. The manager returns the shared checkout to `main`: `git checkout main`. The task branch is the source of truth for all active task artifacts; `main` is the control plane.
+4. The task branch is pushed to the remote (if `integration.mode = pull_request`) or left local (if `local_merge`).
+5. The manager does **not** commit the task folder to `main`.
+
+Human approval is performed from the `main` checkout via `approve`:
+
+```bash
+python .ai-workflow/scripts/ai_task.py approve AI-NNN
+```
 
 #### Task ID uniqueness strategy
 
