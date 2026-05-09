@@ -1,4 +1,4 @@
 decision: "changes_requested"
 reviewer: "codex"
 reviewed_at: "2026-05-10"
-notes: "Second review: --all crashes from helper signature mismatch, and workflow.mode guard uses the wrong config shape."
+notes: "Workflow mode guard must treat missing workflow.mode as main_first per protocol defaults."
