@@ -1,4 +1,4 @@
-decision: "pending"
-reviewer: null
-reviewed_at: null
-notes: ""
+decision: "changes_requested"
+reviewer: "codex"
+reviewed_at: "2026-05-10"
+notes: "Approval commit path must be safe when an existing worktree has staged or dirty local changes."
