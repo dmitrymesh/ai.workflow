@@ -216,7 +216,7 @@ def update_from_main(args: argparse.Namespace) -> None:
         raise SystemExit("Error: 'main' branch not found.")
 
     cfg = _parse_workflow_config()
-    mode = cfg.get("workflow", {}).get("mode", "branch_first")
+    mode = cfg.get("mode", "branch_first")
     if mode != "branch_first":
         raise SystemExit(
             f"Error: update-from-main is only supported in branch_first workflow mode "
@@ -249,7 +249,7 @@ def update_from_main(args: argparse.Namespace) -> None:
         print(f"Scanning {len(branches)} local task branch(es)...")
         for branch in branches:
             tid = _task_id_from_branch(branch) or "?"
-            meta = _read_task_meta_from_branch(branch)
+            meta = _read_task_meta_from_branch(branch, tid)
             status = (meta or {}).get("status", "")
             if status and status not in _ACTIVE_STATUSES:
                 results.append(_UpdateResult(branch, tid, "skipped_inactive",

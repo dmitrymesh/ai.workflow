@@ -194,8 +194,8 @@ class TestProcessBranch(unittest.TestCase):
 # update_from_main handler
 # ---------------------------------------------------------------------------
 
-_BRANCH_FIRST_CFG = {"workflow": {"mode": "branch_first"}}
-_MAIN_FIRST_CFG = {"workflow": {"mode": "main_first"}}
+_BRANCH_FIRST_CFG = {"mode": "branch_first"}
+_MAIN_FIRST_CFG = {"mode": "main_first"}
 _ACTIVE_META = {"status": "in_progress"}
 _DONE_META = {"status": "done"}
 
@@ -291,13 +291,15 @@ class TestUpdateFromMainHandler(unittest.TestCase):
              patch("_update_from_main._list_local_branches",
                    return_value=branches), \
              patch("_update_from_main._read_task_meta_from_branch",
-                   side_effect=[_ACTIVE_META, _DONE_META]), \
+                   side_effect=[_ACTIVE_META, _DONE_META]) as mock_meta, \
              patch("_update_from_main._process_branch",
                    return_value=_UpdateResult("ai/AI-001-task", "AI-001",
                                               "dry_run", "")) as mock_proc, \
              patch("sys.stdout", new_callable=io.StringIO):
             update_from_main(args)
         self.assertEqual(mock_proc.call_count, 1)
+        # helper must be called with both branch and task_id
+        mock_meta.assert_any_call("ai/AI-001-task", "AI-001")
 
     def test_main_first_mode_rejected(self) -> None:
         """update-from-main must exit with an error in main_first workflow mode."""

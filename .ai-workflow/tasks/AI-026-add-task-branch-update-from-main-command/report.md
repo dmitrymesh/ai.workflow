@@ -19,7 +19,7 @@ targeting a single task by ID or all eligible active local worktrees via `--all`
 - `python .ai-workflow/scripts/ai_task.py validate` — passed
 - `python -m unittest test_update_from_main -v` — 28/28 tests passed
 - `update-from-main --help` — subcommand registered and described correctly
-- `update-from-main --all` dry-run against real repo: correctly reported 5 branches to update, 1 dirty (AI-026 itself), 2 no-worktree, 12 skipped-merged — all correct
+- `update-from-main --all` live dry-run: 5 would-update, 1 dirty (AI-026), 2 no-worktree, 2 merged into main, 10 skipped-inactive (done) — all correct
 - `update-from-main AI-022` dry-run: correctly targeted single branch with 14 pending commits
 - `git diff --name-only main...HEAD` — only task folder + five implementation files; no forbidden files
 
@@ -34,25 +34,20 @@ targeting a single task by ID or all eligible active local worktrees via `--all`
 - If `main` diverges from `origin/main` and users don't fetch before running, the merge may miss remote commits. This is documented as expected behavior ("fetch first").
 - `git rev-list branch..main --count` compares local branch HEADs only; does not account for remote-tracking refs unless the user has fetched.
 
-## Review fixes (changes_requested → ready_for_review)
+## Review fixes (round 3)
 
-**Blocking issue 1 — `--all` did not filter by active status:**
-Added `_ACTIVE_STATUSES` constant and, in the `--all` loop, read each branch's
-`metadata.yaml` via `_read_task_meta_from_branch`. Branches with `done` or
-`rejected` status are now reported as `skipped_inactive` and bypassed.
+**Blocking issue 1 — `_read_task_meta_from_branch` called with wrong arity:**
+The helper requires `(branch, task_id)` but was called with `(branch)` only.
+Fixed by passing `tid` as the second argument. Added `mock_meta.assert_any_call`
+assertion in `test_all_skips_inactive_branches` to lock in the correct call
+signature.
 
-**Blocking issue 2 — no `workflow.mode` check:**
-Added `_parse_workflow_config()` call at the start of `update_from_main`. If the
-mode is not `branch_first`, the command exits immediately with a clear error
-message.
+**Blocking issue 2 — workflow mode check against wrong config shape:**
+`_parse_workflow_config()` returns `{"mode": "...", "discovery": {...}}` (the
+`workflow:` block's children directly). The check was `cfg.get("workflow",
+{}).get("mode", ...)` which always fell back to the default. Fixed to
+`cfg.get("mode", "branch_first")`. Tests updated to mock the real shape
+(`{"mode": "branch_first"}` / `{"mode": "main_first"}`).
 
-**Non-blocking — README conflict wording:**
-Updated the safety-rules bullet in the README to describe actual behavior: the
-command reports the conflict, continues processing remaining branches (with
-`--all`), and exits non-zero at the end. The old text said "stops", which
-implied early termination.
-
-**Tests:** two new tests added — `test_all_skips_inactive_branches` and
-`test_main_first_mode_rejected`; all existing tests updated to patch
-`_parse_workflow_config` so they are not coupled to the real config file.
-Total: 28/28 passed.
+**Live smoke test:** `update-from-main --all` ran without error and produced
+correct output across all 20 local branches.
