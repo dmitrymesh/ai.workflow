@@ -1,6 +1,6 @@
 id: "AI-021"
 title: "Add branch-first approve command"
-status: "ready_for_review"
+status: "done"
 risk: "medium"
 area:
   - workflow
