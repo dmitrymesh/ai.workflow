@@ -1,0 +1,17 @@
+id: "AI-029"
+title: "Update from main without existing worktree"
+status: "draft"
+risk: "high"
+area: [workflow, cli, git]
+owner: null
+reviewer: null
+branch: "ai/AI-029-update-from-main-without-existing-worktree"
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related: ["AI-026"]
+created_at: "2026-05-10"
+updated_at: "2026-05-10"
