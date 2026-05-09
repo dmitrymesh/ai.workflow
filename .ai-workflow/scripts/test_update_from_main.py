@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, call, patch
 sys.path.insert(0, str(Path(__file__).parent))
 
 from _update_from_main import (
+    _ACTIVE_STATUSES,
     _UpdateResult,
     _commits_main_ahead,
     _find_worktree_for_branch,
@@ -193,6 +194,12 @@ class TestProcessBranch(unittest.TestCase):
 # update_from_main handler
 # ---------------------------------------------------------------------------
 
+_BRANCH_FIRST_CFG = {"workflow": {"mode": "branch_first"}}
+_MAIN_FIRST_CFG = {"workflow": {"mode": "main_first"}}
+_ACTIVE_META = {"status": "in_progress"}
+_DONE_META = {"status": "done"}
+
+
 class TestUpdateFromMainHandler(unittest.TestCase):
     """Integration-level tests for the CLI handler."""
 
@@ -201,35 +208,43 @@ class TestUpdateFromMainHandler(unittest.TestCase):
 
     def _run_handler(self, args):
         with patch("_update_from_main._run_git", side_effect=[
-            (True, ".git"),         # rev-parse --git-dir
-            (True, "abc123"),        # rev-parse --verify main
-        ]):
-            with patch("_update_from_main.repo_root", return_value=_ROOT), \
-                 patch("_update_from_main._find_branch_for_task",
-                       return_value="ai/AI-001-task"), \
-                 patch("_update_from_main._process_branch",
-                       return_value=_UpdateResult("ai/AI-001-task", "AI-001",
-                                                  "dry_run", "2 commits pending")), \
-                 patch("sys.stdout", new_callable=io.StringIO):
-                update_from_main(args)
+            (True, ".git"),
+            (True, "abc123"),
+        ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._find_branch_for_task",
+                   return_value="ai/AI-001-task"), \
+             patch("_update_from_main._process_branch",
+                   return_value=_UpdateResult("ai/AI-001-task", "AI-001",
+                                              "dry_run", "2 commits pending")), \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
 
     def test_requires_task_id_or_all(self) -> None:
         args = self._make_args()
-        with self.assertRaises(SystemExit):
-            with patch("_update_from_main._run_git", return_value=(True, "")):
-                update_from_main(args)
+        with self.assertRaises(SystemExit), \
+             patch("_update_from_main._run_git", return_value=(True, "")), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG):
+            update_from_main(args)
 
     def test_task_id_and_all_mutually_exclusive(self) -> None:
         args = self._make_args(task_id="AI-001", update_all=True)
-        with self.assertRaises(SystemExit):
-            with patch("_update_from_main._run_git", return_value=(True, "")):
-                update_from_main(args)
+        with self.assertRaises(SystemExit), \
+             patch("_update_from_main._run_git", return_value=(True, "")), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG):
+            update_from_main(args)
 
     def test_single_task_runs_process_branch(self) -> None:
         args = self._make_args(task_id="AI-001")
         with patch("_update_from_main._run_git", side_effect=[
             (True, ".git"), (True, "abc123"),
         ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
              patch("_update_from_main.repo_root", return_value=_ROOT), \
              patch("_update_from_main._find_branch_for_task",
                    return_value="ai/AI-001-task") as mock_find, \
@@ -247,9 +262,13 @@ class TestUpdateFromMainHandler(unittest.TestCase):
         with patch("_update_from_main._run_git", side_effect=[
             (True, ".git"), (True, "abc123"),
         ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
              patch("_update_from_main.repo_root", return_value=_ROOT), \
              patch("_update_from_main._list_local_branches",
                    return_value=branches), \
+             patch("_update_from_main._read_task_meta_from_branch",
+                   return_value=_ACTIVE_META), \
              patch("_update_from_main._process_branch",
                    side_effect=[
                        _UpdateResult("ai/AI-001-task", "AI-001", "dry_run", ""),
@@ -259,11 +278,46 @@ class TestUpdateFromMainHandler(unittest.TestCase):
             update_from_main(args)
         self.assertEqual(mock_proc.call_count, 2)
 
+    def test_all_skips_inactive_branches(self) -> None:
+        """Branches with done/rejected status are skipped without calling _process_branch."""
+        branches = ["ai/AI-001-task", "ai/AI-002-done"]
+        args = self._make_args(update_all=True)
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._list_local_branches",
+                   return_value=branches), \
+             patch("_update_from_main._read_task_meta_from_branch",
+                   side_effect=[_ACTIVE_META, _DONE_META]), \
+             patch("_update_from_main._process_branch",
+                   return_value=_UpdateResult("ai/AI-001-task", "AI-001",
+                                              "dry_run", "")) as mock_proc, \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
+        self.assertEqual(mock_proc.call_count, 1)
+
+    def test_main_first_mode_rejected(self) -> None:
+        """update-from-main must exit with an error in main_first workflow mode."""
+        args = self._make_args(task_id="AI-001")
+        with self.assertRaises(SystemExit) as cm, \
+             patch("_update_from_main._run_git", side_effect=[
+                 (True, ".git"), (True, "abc123"),
+             ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_MAIN_FIRST_CFG):
+            update_from_main(args)
+        self.assertNotEqual(cm.exception.code, 0)
+
     def test_exits_nonzero_on_conflict(self) -> None:
         args = self._make_args(task_id="AI-001", apply=True)
         with patch("_update_from_main._run_git", side_effect=[
             (True, ".git"), (True, "abc123"),
         ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
              patch("_update_from_main.repo_root", return_value=_ROOT), \
              patch("_update_from_main._find_branch_for_task",
                    return_value="ai/AI-001-task"), \

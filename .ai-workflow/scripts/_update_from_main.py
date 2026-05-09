@@ -20,9 +20,14 @@ from _discovery import (
     _discovery_cfg,
     _list_local_branches,
     _merged_into_main,
+    _parse_workflow_config,
+    _read_task_meta_from_branch,
     _run_git,
     _task_id_from_branch,
 )
+
+# Statuses that represent active in-flight work eligible for update.
+_ACTIVE_STATUSES = {"draft", "ready", "in_progress", "ready_for_review", "changes_requested"}
 
 
 # ---------------------------------------------------------------------------
@@ -164,13 +169,14 @@ _OUTCOME_LABEL = {
     "skipped_dirty":        "Skipped — dirty worktree",
     "skipped_no_worktree":  "Skipped — no local worktree",
     "skipped_merged":       "Skipped — merged into main",
+    "skipped_inactive":     "Skipped — inactive status (done/rejected)",
     "conflict":             "CONFLICT — manual resolution required",
     "error":                "Error",
 }
 
 _OUTCOME_ORDER = [
     "updated", "already_current", "dry_run",
-    "skipped_dirty", "skipped_no_worktree", "skipped_merged",
+    "skipped_dirty", "skipped_no_worktree", "skipped_merged", "skipped_inactive",
     "conflict", "error",
 ]
 
@@ -209,6 +215,14 @@ def update_from_main(args: argparse.Namespace) -> None:
     if not ok:
         raise SystemExit("Error: 'main' branch not found.")
 
+    cfg = _parse_workflow_config()
+    mode = cfg.get("workflow", {}).get("mode", "branch_first")
+    if mode != "branch_first":
+        raise SystemExit(
+            f"Error: update-from-main is only supported in branch_first workflow mode "
+            f"(current mode: {mode})."
+        )
+
     task_id: Optional[str] = getattr(args, "task_id", None)
     update_all: bool = getattr(args, "update_all", False)
     apply: bool = getattr(args, "apply", False)
@@ -229,12 +243,18 @@ def update_from_main(args: argparse.Namespace) -> None:
         print(f"Target: {task_id}  ({branch})")
         results.append(_process_branch(branch, task_id, root, apply))
     else:
-        cfg = _discovery_cfg()
-        prefix = cfg["branch_prefix"]
+        disc_cfg = _discovery_cfg()
+        prefix = disc_cfg["branch_prefix"]
         branches = _list_local_branches(prefix)
         print(f"Scanning {len(branches)} local task branch(es)...")
         for branch in branches:
             tid = _task_id_from_branch(branch) or "?"
+            meta = _read_task_meta_from_branch(branch)
+            status = (meta or {}).get("status", "")
+            if status and status not in _ACTIVE_STATUSES:
+                results.append(_UpdateResult(branch, tid, "skipped_inactive",
+                                             f"status={status}"))
+                continue
             results.append(_process_branch(branch, tid, root, apply))
 
     _print_summary(results)

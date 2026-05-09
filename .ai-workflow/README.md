@@ -462,7 +462,8 @@ python .ai-workflow/scripts/ai_task.py update-from-main --all --apply
 - Dirty worktrees (uncommitted changes) are skipped and reported.
 - Already-current branches are reported without creating empty commits.
 - Merge conflicts leave the worktree in a normal conflict state for manual
-  resolution; the command reports the path and stops.
+  resolution; the command reports the conflict, continues processing remaining
+  branches (with `--all`), and exits with a non-zero status at the end.
 - The main checkout branch is never changed.
 
 **When to use:**
