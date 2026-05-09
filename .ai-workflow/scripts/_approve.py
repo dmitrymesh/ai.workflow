@@ -135,6 +135,56 @@ def _find_existing_worktree(branch: str, root: Path) -> Optional[Path]:
     return None
 
 
+def _assert_worktree_clean(worktree_path: Path, meta_rel: str) -> None:
+    """Raise SystemExit if the worktree has staged changes or if the target file is locally modified.
+
+    Guards against two unsafe situations when reusing an existing worktree:
+    - Staged changes unrelated to this approval being swept into the commit.
+    - Local modifications to metadata.yaml being silently overwritten.
+    """
+    ok, out = _run_git(["status", "--porcelain"], cwd=worktree_path)
+    if not ok:
+        raise SystemExit(
+            f"Could not read worktree status at {worktree_path}. "
+            "Cannot safely reuse this worktree."
+        )
+
+    if not out:
+        return  # clean worktree — nothing to check
+
+    # git always uses forward slashes in porcelain output
+    meta_rel_norm = meta_rel.replace("\\", "/")
+
+    staged: list = []
+    meta_dirty = False
+
+    for line in out.splitlines():
+        if len(line) < 4:
+            continue
+        index_status = line[0]   # staged
+        worktree_status = line[1]  # working tree
+        path = line[3:].strip().replace("\\", "/")
+
+        if index_status not in (" ", "?"):
+            staged.append(path)
+
+        if path == meta_rel_norm and worktree_status != " ":
+            meta_dirty = True
+
+    if staged:
+        listing = "\n".join(f"  {p}" for p in staged)
+        raise SystemExit(
+            f"Existing worktree at {worktree_path} has staged changes:\n{listing}\n"
+            "Unstage or commit these changes before approving."
+        )
+
+    if meta_dirty:
+        raise SystemExit(
+            f"Existing worktree at {worktree_path} has local modifications to "
+            f"{meta_rel}. Commit or discard them before approving."
+        )
+
+
 def _execute_approval(
     branch: str, folder_path: str, task_id: str, meta: dict
 ) -> None:
@@ -145,10 +195,11 @@ def _execute_approval(
 
     existing = _find_existing_worktree(branch, root)
     if existing:
-        # Reuse the existing worktree — no create/remove cycle needed.
         worktree_path = existing
         use_temp = False
         print(f"  Using existing worktree: {worktree_path}")
+        # Refuse to proceed if the worktree has staged changes or a dirty target file.
+        _assert_worktree_clean(worktree_path, meta_rel)
     else:
         # Create a temporary worktree with a time-suffixed path to avoid collisions.
         worktree_path = (
