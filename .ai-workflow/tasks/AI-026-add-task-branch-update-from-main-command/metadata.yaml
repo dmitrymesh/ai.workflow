@@ -1,8 +1,11 @@
 id: "AI-026"
 title: "Add task branch update from main command"
-status: "draft"
+status: "ready"
 risk: "high"
-area: [workflow, cli, git]
+area:
+  - workflow
+  - cli
+  - git
 owner: null
 reviewer: null
 branch: "ai/AI-026-add-task-branch-update-from-main-command"
