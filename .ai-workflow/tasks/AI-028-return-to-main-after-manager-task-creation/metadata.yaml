@@ -1,8 +1,10 @@
 id: "AI-028"
 title: "Return to main after manager task creation"
-status: "draft"
+status: "ready"
 risk: "low"
-area: [workflow, docs]
+area:
+  - workflow
+  - docs
 owner: null
 reviewer: null
 branch: "ai/AI-028-return-to-main-after-manager-task-creation"
