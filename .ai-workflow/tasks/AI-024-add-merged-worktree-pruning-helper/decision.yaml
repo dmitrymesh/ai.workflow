@@ -1,4 +1,4 @@
-decision: "pending"
-reviewer: null
-reviewed_at: null
-notes: ""
+decision: "changes_requested"
+reviewer: "codex"
+reviewed_at: "2026-05-13"
+notes: "Candidate selection includes merged non-task worktrees; prune must be limited to task branches."
