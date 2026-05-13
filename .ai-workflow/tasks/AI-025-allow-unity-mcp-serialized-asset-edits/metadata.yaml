@@ -1,6 +1,6 @@
 id: "AI-025"
 title: "Allow Unity MCP serialized asset edits"
-status: "changes_requested"
+status: "in_progress"
 risk: "medium"
 area:
   - workflow

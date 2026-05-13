@@ -14,8 +14,10 @@ Your job:
   authorizes changes to `.unity`, `.prefab`, `.asset`, or `.meta` files, names
   the specific scope, and states that Unity MCP or Editor tooling will be used,
   you may proceed with those changes using the authorized tooling. Do not
-  hand-edit Unity serialized YAML. If the authorized tooling is not accessible,
-  stop and document the reason in `report.md`.
+  hand-edit Unity serialized YAML unless `task.md` explicitly requests direct
+  manual YAML editing and defines the specific scope and validation. If the
+  authorized tooling is not accessible and no direct edit is explicitly
+  requested, stop and document the reason in `report.md`.
 - After implementation, write `report.md`.
 - Update `validation.md` honestly.
 

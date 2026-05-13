@@ -1,6 +1,6 @@
 # Unity Guardrails
 
-Forbidden by default (direct hand edits are never allowed):
+Forbidden by default:
 
 - `.unity` scene changes
 - `.prefab` changes
@@ -26,9 +26,11 @@ conditions:
    change will be verified (e.g., Unity compiles without errors, a PlayMode
    test passes).
 
-Direct manual edits to Unity serialized YAML remain forbidden even when
-Unity MCP/editor-backed changes are authorized. If Unity MCP or Editor
-tooling is not accessible, stop and document the reason in `report.md`.
+Direct manual edits to Unity serialized YAML are forbidden by default;
+they are allowed only when `task.md` explicitly requests direct YAML
+editing and defines the scope and validation. If Unity MCP or Editor
+tooling is not accessible and no direct edit is explicitly requested,
+stop and document the reason in `report.md`.
 
 Prefer:
 

@@ -38,7 +38,8 @@ For Unity projects:
 - Do not modify `.unity`, `.prefab`, `.asset`, or `.meta` files unless `task.md`
   explicitly authorizes it, names the specific scope, and states that Unity MCP
   or Editor-backed tooling will be used. Direct hand edits to Unity serialized
-  YAML remain forbidden even when the task authorizes the change.
+  YAML are forbidden by default; they are allowed only when `task.md` explicitly
+  requests direct manual editing, names the specific scope, and defines validation.
 - Do not modify packages or project settings unless the task explicitly allows it.
 - Do not rename serialized fields without migration notes.
 - Prefer pure C# logic and EditMode tests where possible.
