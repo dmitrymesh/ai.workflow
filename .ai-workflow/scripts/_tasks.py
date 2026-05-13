@@ -200,7 +200,7 @@ def _commit_review_artifacts(task_dir, task_id: str, decision: str) -> None:
 
     manual = (
         f"  git add {' '.join(to_stage)}\n"
-        f"  git commit -m 'review: {task_id} | {decision}'"
+        f"  git commit -m 'review: {task_id} | {decision}' -- {' '.join(to_stage)}"
     )
 
     def _git(git_args: list) -> None:

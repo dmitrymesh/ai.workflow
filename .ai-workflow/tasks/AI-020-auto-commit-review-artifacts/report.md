@@ -8,7 +8,7 @@ Made `review --approve` and `review --changes-requested` auto-commit task artifa
 - Stages only the three known task-folder files (`metadata.yaml`, `review.md`, `decision.yaml`) — files that do not exist are skipped.
 - Checks `git diff --cached --quiet -- <task-paths>` (scoped to the task folder) before committing; skips if nothing new is staged for those specific paths.
 - Passes the task-folder pathspecs to `git commit` as well, so git commits only those files even if the reviewer has unrelated staged changes in the index.
-- On `git add` or `git commit` failure, raises with a message that tells the reviewer which files were written and the exact manual commit command to recover.
+- On `git add` or `git commit` failure, raises with a message that tells the reviewer which files were written and the exact manual commit command to recover — the recovery `git commit` also includes task-folder pathspecs so unrelated staged files cannot be committed by following the recovery instructions.
 
 `review_task()` calls the helper after `generate_board()` unless `args.no_commit` is set.
 
@@ -16,7 +16,7 @@ Made `review --approve` and `review --changes-requested` auto-commit task artifa
 
 - `.ai-workflow/scripts/_tasks.py` — added `subprocess` and `repo_root` imports; added `_commit_review_artifacts`; wired it into `review_task()` with `no_commit` guard.
 - `.ai-workflow/scripts/ai_task.py` — added `--no-commit` flag to the `review` subparser.
-- `.ai-workflow/scripts/test_review.py` — new test file: 13 tests covering helper behavior, approve/changes-requested commit, no-commit skip, status guards, and verification that `git commit` includes task-folder pathspecs (excluding unrelated staged files).
+- `.ai-workflow/scripts/test_review.py` — new test file: 14 tests covering helper behavior, approve/changes-requested commit, no-commit skip, status guards, verification that `git commit` includes task-folder pathspecs (excluding unrelated staged files), and verification that the manual recovery `git commit` in the error message also includes pathspecs.
 - `.ai-workflow/skills/reviewer.md` — updated "Commit discipline" section to document auto-commit and `--no-commit` escape hatch.
 
 ## Validation performed

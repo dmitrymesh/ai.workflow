@@ -148,6 +148,30 @@ class TestCommitReviewArtifacts(unittest.TestCase):
         self.assertIn("NOT committed", str(cm.exception))
         self.assertIn("git add", str(cm.exception))
 
+    def test_git_commit_failure_recovery_includes_pathspecs(self) -> None:
+        """Manual recovery `git commit` in error message must include task-folder pathspecs."""
+        tmp, root, task_dir = self._setup()
+        fail = MagicMock(returncode=1, stderr="commit failed", stdout="")
+
+        def _fail_commit(cmd, **kwargs):
+            if cmd[:2] == ["git", "diff"]:
+                return MagicMock(returncode=1)  # non-zero → staged changes exist → proceed
+            if cmd[:2] == ["git", "commit"]:
+                return fail
+            return MagicMock(returncode=0)
+
+        with tmp:
+            with patch("_tasks.repo_root", return_value=root), \
+                 patch("subprocess.run", side_effect=_fail_commit):
+                with self.assertRaises(SystemExit) as cm:
+                    _commit_review_artifacts(task_dir, _TASK_ID, "done")
+        msg = str(cm.exception)
+        self.assertIn("NOT committed", msg)
+        commit_line = next((l for l in msg.splitlines() if "git commit -m" in l), None)
+        self.assertIsNotNone(commit_line, "No 'git commit -m' line found in recovery message")
+        self.assertIn("--", commit_line)
+        self.assertIn("AI-020-slug", commit_line)
+
     def test_task_dir_outside_root_raises(self) -> None:
         with patch("_tasks.repo_root", return_value=Path("/other/path")):
             with self.assertRaises(SystemExit) as cm:
