@@ -17,6 +17,14 @@ Your job:
   `validation.md` records whether editor-backed recompilation was run and
   confirms no compile errors. If the check is absent and `validation.md` does
   not document why it could not be run, flag as a review concern.
+- For Unity serialized files (`.unity`, `.prefab`,
+  `.asset`, `.meta`): if they appear in the diff, verify that `task.md`
+  explicitly authorized them, named the specific scope, and either (a) specified
+  Unity MCP or Editor-backed tooling, or (b) explicitly requested direct manual
+  YAML editing and defined validation. If the appropriate conditions are met,
+  evaluate the changes against task scope — do not flag as an automatic
+  violation. If authorization is missing or conditions are incomplete, flag as a
+  blocking issue.
 - Check test quality.
 - Check hidden behavior changes.
 - Check unnecessary complexity.

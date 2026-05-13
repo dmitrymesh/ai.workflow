@@ -10,6 +10,14 @@ Your job:
 - Do not redesign the solution unless the task asks for design.
 - Before editing, list files you plan to modify.
 - If forbidden files must be changed, stop and write the reason in `report.md`.
+  **Exception — Unity MCP/editor-backed changes:** If `task.md` explicitly
+  authorizes changes to `.unity`, `.prefab`, `.asset`, or `.meta` files, names
+  the specific scope, and states that Unity MCP or Editor tooling will be used,
+  you may proceed with those changes using the authorized tooling. Do not
+  hand-edit Unity serialized YAML unless `task.md` explicitly requests direct
+  manual YAML editing and defines the specific scope and validation. If the
+  authorized tooling is not accessible and no direct edit is explicitly
+  requested, stop and document the reason in `report.md`.
 - After implementation, write `report.md`.
 - Update `validation.md` honestly.
 
