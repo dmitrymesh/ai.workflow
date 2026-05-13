@@ -13,6 +13,10 @@ Your job:
 - Check acceptance criteria.
 - Check scope violations.
 - Check forbidden file changes.
+- Check Unity recompilation validation (Unity-profile tasks): verify that
+  `validation.md` records whether editor-backed recompilation was run and
+  confirms no compile errors. If the check is absent and `validation.md` does
+  not document why it could not be run, flag as a review concern.
 - Check test quality.
 - Check hidden behavior changes.
 - Check unnecessary complexity.

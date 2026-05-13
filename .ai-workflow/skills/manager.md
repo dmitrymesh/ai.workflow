@@ -37,6 +37,18 @@ Recommended risk levels:
 - medium: integration work, runtime flow changes, UI logic
 - high: save/load, monetization, purchases, large refactors, scene/prefab changes
 
+For Unity tasks that modify C# code, scenes, or prefabs, include the following
+in the Validation section of `task.md`:
+
+```
+- Unity recompilation: trigger via Unity MCP (`refresh_unity`) or equivalent
+  editor automation; confirm no compile errors; read compiler diagnostics.
+```
+
+This signals to the executor that editor-backed recompilation is required. If
+the task is documentation-only or does not touch Unity code, this line may be
+omitted and the executor writes `not run` with the reason.
+
 Splitting broad requests:
 
 - If a user request is too large for one reviewable PR, split it into multiple smaller tasks.

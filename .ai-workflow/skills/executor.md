@@ -38,6 +38,17 @@ Validation honesty:
 - Do not write `passed` unless the command was actually executed.
 - If validation failed, do not move to `ready_for_review`.
 
+For Unity-profile tasks when Unity MCP or editor automation is available:
+
+- After implementation, trigger recompilation via `refresh_unity` (Unity MCP)
+  or equivalent editor command.
+- Read compiler diagnostics (e.g., `read_console` with `types: ["error"]`) to
+  confirm no compile errors remain.
+- Record in `validation.md`: `passed` (no errors, logs checked), `failed`
+  (errors listed), or `not run` (concrete reason given — e.g., "Unity MCP not
+  connected" or "documentation-only, no Unity code changed").
+- Do not write `passed` for the recompilation check without running it.
+
 ---
 
 ## Discovering ready tasks

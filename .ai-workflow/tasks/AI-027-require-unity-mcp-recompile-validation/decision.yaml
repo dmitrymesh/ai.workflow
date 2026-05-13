@@ -1,0 +1,4 @@
+decision: approve
+reviewer: Codex
+reviewed_at: "2026-05-13"
+notes: "Approved. Unity MCP/editor recompile validation guidance is covered for executor, reviewer, manager, and Unity profile docs; no Unity project files were changed."
