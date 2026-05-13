@@ -53,6 +53,7 @@ _PORCELAIN_DETACHED = (
 _MERGED_LOCAL = {"ai/AI-008-slug", "main"}
 _EMPTY_MERGED = (set(), set())
 _SOME_MERGED = ({"ai/AI-008-slug", "main"}, set())
+_DEFAULT_CFG = {"branch_prefix": "ai/"}
 
 
 def _make_args(apply=False):
@@ -125,16 +126,19 @@ class TestIsDirty(unittest.TestCase):
 
 class TestPruneWorktreesDryRun(unittest.TestCase):
 
-    def _run(self, porcelain=_PORCELAIN_WITH_MERGED, merged=_SOME_MERGED):
+    def _run(self, merged=_SOME_MERGED, worktrees=None):
+        if worktrees is None:
+            worktrees = [
+                _WorktreeEntry(_ROOT, "main"),
+                _WorktreeEntry(_WT_MERGED, "ai/AI-008-slug"),
+                _WorktreeEntry(_WT_ACTIVE, "ai/AI-099-active"),
+            ]
         args = _make_args(apply=False)
         with patch("_prune._run_git", return_value=(True, "")), \
              patch("_prune.repo_root", return_value=_ROOT), \
+             patch("_prune._discovery_cfg", return_value=_DEFAULT_CFG), \
              patch("_prune._merged_into_main", return_value=merged), \
-             patch("_prune._list_worktrees", return_value=[
-                 _WorktreeEntry(_ROOT, "main"),
-                 _WorktreeEntry(_WT_MERGED, "ai/AI-008-slug"),
-                 _WorktreeEntry(_WT_ACTIVE, "ai/AI-099-active"),
-             ]), \
+             patch("_prune._list_worktrees", return_value=worktrees), \
              patch("sys.stdout", new_callable=io.StringIO) as mock_out:
             prune_worktrees(args)
         return mock_out.getvalue()
@@ -159,6 +163,20 @@ class TestPruneWorktreesDryRun(unittest.TestCase):
         out = self._run()
         self.assertIn("--apply", out)
 
+    def test_merged_non_task_branch_is_skipped(self) -> None:
+        """A worktree on a merged branch that does not start with the task prefix
+        must not appear as a candidate."""
+        non_task_wt = Path("/fake/repo.worktrees/feature-foo")
+        merged = ({"ai/AI-008-slug", "main", "feature/foo"}, set())
+        worktrees = [
+            _WorktreeEntry(_ROOT, "main"),
+            _WorktreeEntry(_WT_MERGED, "ai/AI-008-slug"),
+            _WorktreeEntry(non_task_wt, "feature/foo"),
+        ]
+        out = self._run(merged=merged, worktrees=worktrees)
+        self.assertNotIn("feature/foo", out)
+        self.assertIn("AI-008-slug", out)
+
 
 # ---------------------------------------------------------------------------
 # prune_worktrees — apply mode
@@ -171,6 +189,7 @@ class TestPruneWorktreesApply(unittest.TestCase):
         remove_result = (remove_ok, "" if remove_ok else "error removing")
         with patch("_prune._run_git", return_value=(True, "")), \
              patch("_prune.repo_root", return_value=_ROOT), \
+             patch("_prune._discovery_cfg", return_value=_DEFAULT_CFG), \
              patch("_prune._merged_into_main", return_value=_SOME_MERGED), \
              patch("_prune._list_worktrees", return_value=[
                  _WorktreeEntry(_ROOT, "main"),
@@ -203,6 +222,7 @@ class TestPruneWorktreesApply(unittest.TestCase):
         args = _make_args(apply=True)
         with patch("_prune._run_git", return_value=(True, "")), \
              patch("_prune.repo_root", return_value=_ROOT), \
+             patch("_prune._discovery_cfg", return_value=_DEFAULT_CFG), \
              patch("_prune._merged_into_main", return_value=_SOME_MERGED), \
              patch("_prune._list_worktrees", return_value=[
                  _WorktreeEntry(_ROOT, "main"),

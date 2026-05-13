@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, NamedTuple, Optional
 
 from _core import repo_root
-from _discovery import _merged_into_main, _run_git
+from _discovery import _discovery_cfg, _merged_into_main, _run_git
 
 
 class _WorktreeEntry(NamedTuple):
@@ -65,6 +65,7 @@ def prune_worktrees(args: argparse.Namespace) -> None:
     root = repo_root()
     apply = getattr(args, "apply", False)
 
+    prefix = _discovery_cfg()["branch_prefix"]  # e.g. "ai/"
     merged_local, _ = _merged_into_main()
     worktrees = _list_worktrees(root)
 
@@ -77,6 +78,8 @@ def prune_worktrees(args: argparse.Namespace) -> None:
             continue
         if entry.branch is None:
             continue  # detached HEAD — skip
+        if not entry.branch.startswith(prefix):
+            continue  # not a task branch — skip
         if entry.branch not in merged_local:
             continue
         candidates.append(entry)
