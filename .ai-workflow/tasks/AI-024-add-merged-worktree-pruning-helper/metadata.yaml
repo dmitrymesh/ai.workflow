@@ -1,0 +1,20 @@
+id: "AI-024"
+title: "Add merged worktree pruning helper"
+status: "done"
+risk: "low"
+area:
+  - workflow
+  - cli
+  - git
+owner: null
+reviewer: null
+branch: "ai/AI-024-add-merged-worktree-pruning-helper"
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related: []
+created_at: "2026-05-09"
+updated_at: "2026-05-13"

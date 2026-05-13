@@ -1,0 +1,4 @@
+decision: "approve"
+reviewer: "codex"
+reviewed_at: "2026-05-13"
+notes: "Task-branch filtering was added; implementation satisfies AI-024 acceptance criteria."
