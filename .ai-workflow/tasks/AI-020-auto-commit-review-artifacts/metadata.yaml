@@ -1,6 +1,6 @@
 id: "AI-020"
 title: "Auto-commit review artifacts"
-status: "in_progress"
+status: "ready_for_review"
 risk: "medium"
 area:
   - workflow
