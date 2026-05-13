@@ -2,20 +2,20 @@
 
 Reviewed 2026-05-13.
 
+## Follow-up review 2026-05-13
+
+The previous blocking issue is resolved. `_worktree_remove` failure after a
+successful merge now produces an explicit warning with the leftover worktree
+path and manual cleanup command, and `test_apply_successful_cleanup_failure_warns`
+covers the path.
+
 ## Decision
 
-changes_requested
+approve
 
 ## Blocking issues
 
-1. `.ai-workflow/scripts/_update_from_main.py:180` ignores temporary worktree
-   cleanup failure after a successful merge. `_worktree_remove(temp_path, root)`
-   returns `(ok, output)`, but the result is discarded and the command always
-   reports `Temporary worktree cleaned up.` at line 183. This violates the task's
-   cleanup and clear recovery requirements: if `git worktree remove` fails, the
-   command leaves a managed worktree behind while telling the user it was
-   removed. Handle the failure explicitly by reporting the leftover path and
-   cleanup error, and add a focused test for `remove_ok=False`.
+None.
 
 ## Non-blocking issues
 
@@ -28,18 +28,18 @@ task artifact scope. No forbidden files were modified.
 
 ## Acceptance criteria check
 
-Mostly satisfied, but blocked by the cleanup failure handling above. Dry-run
-single-task no-worktree reporting works, `--all` excludes no-worktree branches
-by default, `--all --include-no-worktree` includes them, conflict handling is
-covered by tests, and existing worktree-backed behavior remains covered.
+Passed. Dry-run single-task no-worktree reporting works, `--all` excludes
+no-worktree branches by default, `--all --include-no-worktree` includes them,
+conflict handling and cleanup-failure handling are covered by tests, and
+existing worktree-backed behavior remains covered.
 
 ## Test quality
 
-Good coverage overall: `test_update_from_main` covers the new no-worktree
-selection, apply success, add failure, and conflict paths. It is missing the
-cleanup-failure case that exposes the blocking issue.
+Good coverage. `test_update_from_main` covers the new no-worktree selection,
+apply success, add failure, conflict, and cleanup-failure paths. I reran
+`validate`, `test_update_from_main`, `git diff --check`, and the required dry-run
+smoke checks.
 
 ## Required fixes
 
-Handle `_worktree_remove` failure after successful merge and test that path.
-The command should not claim cleanup succeeded when it did not.
+None.

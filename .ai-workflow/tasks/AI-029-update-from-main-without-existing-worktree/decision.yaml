@@ -1,4 +1,4 @@
-decision: "changes_requested"
+decision: "approve"
 reviewer: "codex"
 reviewed_at: "2026-05-13"
-notes: "Cleanup failure after successful temporary-worktree merge is ignored and misreported."
+notes: "Cleanup failure handling was fixed; implementation satisfies AI-029 acceptance criteria."
