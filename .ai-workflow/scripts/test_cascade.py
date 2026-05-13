@@ -48,7 +48,9 @@ def _make_task(tasks_dir: Path, task_id: str, title: str, status: str, **kwargs)
 
 
 def _approve(task_id: str) -> None:
-    args = argparse.Namespace(task_id=task_id, approve=True, changes_requested=False)
+    args = argparse.Namespace(
+        task_id=task_id, approve=True, changes_requested=False, no_commit=True
+    )
     review_task(args)
 
 
