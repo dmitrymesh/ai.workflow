@@ -1,6 +1,6 @@
 id: "AI-019"
 title: "Fix claim for branch-first mode"
-status: "ready"
+status: "in_progress"
 risk: "low"
 area:
   - workflow
