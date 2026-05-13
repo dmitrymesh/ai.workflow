@@ -1,19 +1,25 @@
 # Review: AI-020
 
+## Follow-up review 2026-05-13
+
+The automatic commit path now uses task-folder pathspecs for both the staged
+diff check and `git commit`, so the previous finding is fixed for successful
+auto-commit runs. One related recovery-path issue remains.
+
 ## Decision
 
 changes_requested
 
 ## Blocking issues
 
-1. `.ai-workflow/scripts/_tasks.py:226` commits the whole current index, so
-   unrelated pre-staged files can be included in the review commit. The helper
-   stages only `metadata.yaml`, `review.md`, and `decision.yaml`, but then runs
-   `git commit -m ...` without pathspecs or an index-isolation check. If the
-   reviewer already has an unrelated staged change, Git will commit it too,
-   violating the explicit requirement that unrelated dirty files must not be
-   included. Fix the commit path so only the reviewed task artifacts can be
-   committed, and add a test that starts with an unrelated staged file/change.
+1. `.ai-workflow/scripts/_tasks.py:201` still prints an unsafe manual recovery
+   command. The automatic commit now uses pathspecs, but on `git add` or
+   `git commit` failure the error message tells reviewers to run
+   `git commit -m 'review: ...'` without `-- <task paths>`. In exactly the
+   constrained/failure environments where this recovery text matters, following
+   that command can still commit unrelated pre-staged files. Include the same
+   task-folder pathspecs in the manual commit command and add/update a test that
+   asserts the recovery instructions are path-isolated.
 
 ## Non-blocking issues
 
@@ -26,15 +32,16 @@ guidance, focused tests, and task artifacts.
 
 ## Acceptance criteria check
 
-Blocked. Default approve/changes-requested commit behavior, `--no-commit`, and
-basic artifact staging are covered, but the unrelated dirty/staged-file
-criterion is not safely satisfied.
+Blocked only on the recovery instructions. Default approve/changes-requested
+commit behavior, `--no-commit`, scoped automatic commit pathspecs, and basic
+artifact staging are covered.
 
 ## Test quality
 
-Good baseline coverage, but missing the critical pre-staged unrelated file case.
+Good baseline coverage, including automatic pathspec isolation. Missing coverage
+for the manual recovery command shown on git failure.
 
 ## Required fixes
 
-Ensure the auto-commit cannot include unrelated staged files, then add a focused
-test for that scenario.
+Add task-folder pathspecs to the manual recovery `git commit` command and cover
+that error message in tests.

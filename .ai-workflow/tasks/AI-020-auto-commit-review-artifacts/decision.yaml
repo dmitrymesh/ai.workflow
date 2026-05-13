@@ -1,4 +1,4 @@
 decision: "changes_requested"
 reviewer: "codex"
 reviewed_at: "2026-05-13"
-notes: "Auto-commit can include unrelated pre-staged files because git commit is run without path isolation."
+notes: "Automatic commit is path-isolated, but manual recovery instructions still omit pathspecs."
