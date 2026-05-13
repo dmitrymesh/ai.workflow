@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -15,6 +16,7 @@ from _core import (
     workflow_root,
     write_text,
 )
+from _discovery import _parse_workflow_config
 
 
 def _collect_by_status() -> Dict[str, List[Tuple[Path, dict]]]:
@@ -72,6 +74,14 @@ def generate_board(print_result: bool = True) -> None:
 
 def list_tasks(args: argparse.Namespace) -> None:
     ensure_structure()
+    workflow = _parse_workflow_config()
+    if workflow.get("mode") == "branch_first":
+        print(
+            "Warning: workflow.mode is branch_first — active tasks live in task branches "
+            "and will not appear here.\n"
+            "Use: python .ai-workflow/scripts/ai_task.py list-branches",
+            file=sys.stderr,
+        )
     tasks_by_status = _collect_by_status()
     for status in STATUSES:
         print(f"\n{status}")

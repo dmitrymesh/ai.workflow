@@ -172,13 +172,7 @@ Migrate tasks from the legacy status-by-directory layout to the current flat lay
 python .ai-workflow/scripts/ai_task.py migrate
 ```
 
-List tasks (from main checkout — completed history and main-first active tasks):
-
-```bash
-python .ai-workflow/scripts/ai_task.py list
-```
-
-Discover active tasks from task branches (branch-first workflow):
+Discover active tasks from task branches (**branch-first workflow** — use this as your backlog view):
 
 ```bash
 # All active task branches with status, title, and blockers
@@ -186,6 +180,12 @@ python .ai-workflow/scripts/ai_task.py list-branches
 
 # Inspect one task branch without switching to it
 python .ai-workflow/scripts/ai_task.py show-branch AI-001
+```
+
+List tasks from the current checkout only (completed history and main-first active tasks; **not** a full backlog view in branch-first mode):
+
+```bash
+python .ai-workflow/scripts/ai_task.py list
 ```
 
 Generate board:
