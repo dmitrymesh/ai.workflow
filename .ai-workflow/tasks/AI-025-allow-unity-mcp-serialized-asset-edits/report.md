@@ -17,16 +17,18 @@ The policy change is consistently applied across five documents:
   allowed only when task.md explicitly requests direct YAML editing and defines
   scope and validation" (not "never allowed").
 - **`manager.md`**: added "Authorizing Unity serialized asset changes" block
-  prompting managers to name specific assets, state the tooling, include
+  prompting managers to name specific assets, state the method (MCP/Editor
+  preferred; direct manual YAML as last resort when well-bounded), include
   validation, and use `high` risk unless tightly isolated.
 - **`executor.md`**: added an indented exception under the forbidden-files rule
   explaining when authorized Unity MCP/editor-backed changes are allowed and
   when to stop (tooling inaccessible). Also clarified that hand-editing Unity
   serialized YAML is forbidden by default but allowed when task.md explicitly
   requests it with defined scope and validation.
-- **`reviewer.md`**: expanded the "Check forbidden file changes" bullet to give
-  explicit guidance for Unity serialized files — check three conditions before
-  flagging as a violation.
+- **`reviewer.md`**: expanded the "Check forbidden file changes" bullet — Unity
+  serialized files are accepted when `task.md` authorized them with scope and
+  either (a) MCP/Editor tooling or (b) explicit direct manual YAML request with
+  validation. Missing authorization remains a blocking issue.
 - **`AGENTS.md`**: replaced the single-line Unity file prohibition with a
   two-sentence version that distinguishes authorized MCP/editor-backed changes
   from direct hand edits. Direct hand edits are described as "forbidden by
@@ -54,6 +56,15 @@ The policy change is consistently applied across five documents:
 
 - `CLAUDE.md` already says "If you need to modify forbidden files, stop and write the reason in `report.md`" and references `unity-guardrails.md`. With `unity-guardrails.md` updated, CLAUDE.md implicitly inherits the correct policy without a direct edit.
 - The three-condition requirement (scope named, tooling stated, validation included) is the minimum explicit contract needed to safely authorize MCP/editor-backed changes. This mirrors the spirit of existing "explicitly allowed in task.md" language.
+
+## Changes from review round 2
+
+- `manager.md`: replaced "not direct YAML edits" wording with a two-path
+  description — MCP/Editor preferred, direct manual YAML as last resort when
+  small and well-bounded.
+- `reviewer.md`: expanded the forbidden-file check from three MCP/Editor
+  conditions to two branches: (a) MCP/Editor tooling or (b) explicit direct
+  YAML request with validation.
 
 ## Changes from review round 1
 

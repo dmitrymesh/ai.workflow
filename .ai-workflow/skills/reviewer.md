@@ -14,10 +14,12 @@ Your job:
 - Check scope violations.
 - Check forbidden file changes. For Unity serialized files (`.unity`, `.prefab`,
   `.asset`, `.meta`): if they appear in the diff, verify that `task.md`
-  explicitly authorized them, named the specific scope, and specified Unity MCP
-  or Editor-backed tooling. If all three conditions are met, evaluate the changes
-  against task scope — do not flag as an automatic violation. If any condition is
-  missing, flag as a blocking issue.
+  explicitly authorized them, named the specific scope, and either (a) specified
+  Unity MCP or Editor-backed tooling, or (b) explicitly requested direct manual
+  YAML editing and defined validation. If the appropriate conditions are met,
+  evaluate the changes against task scope — do not flag as an automatic
+  violation. If authorization is missing or conditions are incomplete, flag as a
+  blocking issue.
 - Check test quality.
 - Check hidden behavior changes.
 - Check unnecessary complexity.
