@@ -79,22 +79,41 @@ class TestCommitReviewArtifacts(unittest.TestCase):
         for p in staged_paths:
             self.assertIn("AI-020-slug", p, f"Staged path outside task folder: {p}")
 
-    def test_commits_with_correct_message_approve(self) -> None:
-        mock_run, _ = self._run(decision="done", staged_returncode=1)
+    def _commit_msg(self, mock_run) -> str:
         commit_calls = [c for c in mock_run.call_args_list
                         if c.args[0][:2] == ["git", "commit"]]
         self.assertEqual(len(commit_calls), 1)
-        msg = commit_calls[0].args[0][-1]
+        cmd = commit_calls[0].args[0]
+        # message is the value after -m flag
+        return cmd[cmd.index("-m") + 1]
+
+    def test_commits_with_correct_message_approve(self) -> None:
+        mock_run, _ = self._run(decision="done", staged_returncode=1)
+        msg = self._commit_msg(mock_run)
         self.assertIn("review:", msg)
         self.assertIn(_TASK_ID, msg)
         self.assertIn("done", msg)
 
     def test_commits_with_correct_message_changes_requested(self) -> None:
         mock_run, _ = self._run(decision="changes_requested", staged_returncode=1)
+        self.assertIn("changes_requested", self._commit_msg(mock_run))
+
+    def test_commit_includes_pathspecs_to_exclude_unrelated_staged_files(self) -> None:
+        """git commit must include task-folder pathspecs so unrelated staged files
+        in the index are never committed alongside the review artifacts."""
+        mock_run, task_dir = self._run(staged_returncode=1)
         commit_calls = [c for c in mock_run.call_args_list
                         if c.args[0][:2] == ["git", "commit"]]
         self.assertEqual(len(commit_calls), 1)
-        self.assertIn("changes_requested", commit_calls[0].args[0][-1])
+        cmd = commit_calls[0].args[0]
+        # There must be a "--" separator followed by at least one path
+        self.assertIn("--", cmd)
+        sep_idx = cmd.index("--")
+        pathspecs = cmd[sep_idx + 1:]
+        self.assertTrue(len(pathspecs) > 0, "No pathspecs after -- in commit command")
+        for p in pathspecs:
+            self.assertIn("AI-020-slug", p,
+                          f"Pathspec outside task folder: {p}")
 
     def test_skips_commit_when_nothing_staged(self) -> None:
         # staged_returncode=0 → git diff --cached --quiet exits 0 → nothing staged

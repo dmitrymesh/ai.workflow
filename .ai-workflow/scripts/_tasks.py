@@ -216,14 +216,18 @@ def _commit_review_artifacts(task_dir, task_id: str, decision: str) -> None:
 
     _git(["add"] + to_stage)
 
+    # Check only our specific files — ignore any other pre-staged changes.
     staged = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"], cwd=str(root), capture_output=True
+        ["git", "diff", "--cached", "--quiet", "--"] + to_stage,
+        cwd=str(root), capture_output=True
     )
     if staged.returncode == 0:
         print("Review artifacts already committed — nothing new to stage.")
         return
 
-    _git(["commit", "-m", f"review: {task_id} | {decision}"])
+    # Pass pathspecs to git commit so only the task-folder files are committed
+    # even if the reviewer has unrelated staged changes in the index.
+    _git(["commit", "-m", f"review: {task_id} | {decision}", "--"] + to_stage)
     print(f"Committed review artifacts.")
 
 
