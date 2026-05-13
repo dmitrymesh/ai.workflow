@@ -178,9 +178,17 @@ def _process_branch(
                                  f"failed to create temporary worktree at {temp_path}: {err}")
         success, msg = _merge_main(temp_path)
         if success:
-            _worktree_remove(temp_path, root)
+            rm_ok, rm_err = _worktree_remove(temp_path, root)
+            if rm_ok:
+                cleanup_note = " Temporary worktree cleaned up."
+            else:
+                cleanup_note = (
+                    f" WARNING: merge succeeded but temporary worktree could not be removed "
+                    f"({temp_path}): {rm_err}. Remove it manually with: "
+                    f"git worktree remove {temp_path}"
+                )
             return _UpdateResult(branch, task_id, "updated",
-                                 (msg or "Merge complete.") + " Temporary worktree cleaned up.")
+                                 (msg or "Merge complete.") + cleanup_note)
         return _UpdateResult(branch, task_id, "conflict",
                              f"merge conflict — worktree left at {temp_path} for manual resolution\n"
                              f"To resolve: cd {temp_path} && git merge --continue\n{msg}")

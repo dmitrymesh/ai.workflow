@@ -1,6 +1,6 @@
 id: "AI-029"
 title: "Update from main without existing worktree"
-status: "changes_requested"
+status: "in_progress"
 risk: "high"
 area:
   - workflow

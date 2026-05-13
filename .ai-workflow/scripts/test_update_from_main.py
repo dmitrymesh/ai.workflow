@@ -421,6 +421,13 @@ class TestProcessBranchNoWorktree(unittest.TestCase):
         self.assertEqual(r.outcome, "error")
         self.assertIn("temporary worktree", r.detail)
 
+    def test_apply_successful_cleanup_failure_warns(self) -> None:
+        r = self._run(apply=True, merge_ok=True, remove_ok=False)
+        self.assertEqual(r.outcome, "updated")
+        self.assertIn("WARNING", r.detail)
+        self.assertIn(str(self._TEMP_PATH), r.detail)
+        self.assertNotIn("cleaned up", r.detail)
+
     def test_default_allow_no_worktree_false_still_skips(self) -> None:
         """Without allow_no_worktree, no-worktree branches are still skipped."""
         merged_set = (set(), set())
