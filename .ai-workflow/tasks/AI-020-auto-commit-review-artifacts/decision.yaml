@@ -1,4 +1,4 @@
-decision: "changes_requested"
+decision: "approve"
 reviewer: "codex"
 reviewed_at: "2026-05-13"
-notes: "Automatic commit is path-isolated, but manual recovery instructions still omit pathspecs."
+notes: "Automatic commit and recovery instructions are path-isolated; implementation satisfies AI-020 acceptance criteria."
