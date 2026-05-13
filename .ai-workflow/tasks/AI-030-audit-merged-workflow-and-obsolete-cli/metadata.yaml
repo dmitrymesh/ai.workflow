@@ -1,6 +1,6 @@
 id: "AI-030"
 title: "Audit merged workflow and obsolete CLI"
-status: "in_progress"
+status: "ready_for_review"
 risk: "medium"
 area:
   - workflow
