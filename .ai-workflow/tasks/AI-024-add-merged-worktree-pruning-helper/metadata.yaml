@@ -1,6 +1,6 @@
 id: "AI-024"
 title: "Add merged worktree pruning helper"
-status: "ready"
+status: "in_progress"
 risk: "low"
 area:
   - workflow
