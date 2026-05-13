@@ -1,4 +1,4 @@
-decision: "changes_requested"
-reviewer: "codex"
-reviewed_at: "2026-05-13"
-notes: "Manager and reviewer guidance still conflict with the direct-YAML explicit-request exception."
+decision: "approve"
+reviewer: "Codex"
+reviewed_at: "2026-05-14"
+notes: "Approved. Manager, executor, reviewer, AGENTS, and Unity guardrail guidance now consistently distinguish explicitly authorized MCP/Editor-backed Unity serialized changes from direct manual YAML edits, with direct edits allowed only when task.md explicitly requests them and defines scope and validation."

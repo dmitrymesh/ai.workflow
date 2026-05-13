@@ -2,6 +2,15 @@
 
 Reviewed 2026-05-13.
 
+## Follow-up review 2026-05-14
+
+The previous blocking issue is fixed. Manager, executor, reviewer, and Unity
+guardrail guidance now apply the same rule: Unity serialized files are forbidden
+by default; MCP/Editor-backed changes are allowed only with explicit task
+authorization, named scope, tooling, and validation; direct manual YAML edits
+are allowed only when `task.md` explicitly requests direct YAML editing and
+defines the scope and validation.
+
 ## Follow-up review 2026-05-13
 
 The original blocking issue is partially fixed: `AGENTS.md`, `executor.md`, and
@@ -10,23 +19,11 @@ However, manager and reviewer guidance still conflict with that exception.
 
 ## Decision
 
-changes_requested
+approve
 
 ## Blocking issues
 
-1. `.ai-workflow/skills/manager.md:42` and
-   `.ai-workflow/skills/reviewer.md:15` are not consistent with the explicit
-   direct-YAML exception now documented in `unity-guardrails.md`. Manager
-   guidance only describes authorizing Unity MCP/Editor tooling and says "not
-   direct YAML edits"; reviewer guidance only accepts Unity serialized diffs
-   when task.md specifies MCP or Editor-backed tooling. If a task explicitly
-   requests direct manual YAML editing with scope and validation, as permitted
-   by `unity-guardrails.md`, the manager guidance does not explain how to write
-   that contract and the reviewer guidance would still flag it as missing the
-   MCP/editor condition. Update manager and reviewer docs so all roles apply the
-   same rule: direct YAML edits are forbidden by default, but may be accepted
-   only when `task.md` explicitly requests direct YAML editing and defines the
-   exact scope and validation.
+None.
 
 ## Non-blocking issues
 
@@ -40,9 +37,11 @@ task artifacts. No Unity serialized files, package files, project settings, or
 
 ## Acceptance criteria check
 
-Blocked by the manager/reviewer inconsistency above. The MCP/editor-backed
-three-condition rule is otherwise present, `config.yaml` still preserves the
-sensitive Unity file patterns, and no Unity serialized files were changed.
+Passed. The MCP/editor-backed three-condition rule is present, direct manual
+YAML edits remain forbidden by default with an explicit task-contract exception,
+manager/executor/reviewer guidance is internally consistent, `config.yaml` still
+preserves the sensitive Unity file patterns, and no Unity serialized files were
+changed.
 
 ## Test quality
 
@@ -51,5 +50,4 @@ scan, `git diff --name-only main...HEAD`, and `git diff --check`.
 
 ## Required fixes
 
-Update manager and reviewer guidance to match the direct-manual-YAML exception
-already present in `unity-guardrails.md` and `executor.md`.
+None.
