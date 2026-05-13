@@ -1,6 +1,6 @@
 id: "AI-027"
 title: "Require Unity MCP recompile validation"
-status: "in_progress"
+status: "ready_for_review"
 risk: "medium"
 area:
   - workflow
