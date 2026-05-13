@@ -334,6 +334,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Update all active unmerged task branches that have local worktrees.",
     )
     p_update.add_argument(
+        "--include-no-worktree",
+        action="store_true",
+        dest="include_no_worktree",
+        help=(
+            "With --all: also include active branches that have no local worktree. "
+            "A temporary worktree is created, main is merged, then it is cleaned up. "
+            "On conflict the worktree is left in place for manual resolution."
+        ),
+    )
+    p_update.add_argument(
         "--apply",
         action="store_true",
         help="Actually perform merges (default: dry-run, reports what would happen).",

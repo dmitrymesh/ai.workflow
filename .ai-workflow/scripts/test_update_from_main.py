@@ -23,6 +23,9 @@ from _update_from_main import (
     _is_worktree_dirty,
     _merge_main,
     _process_branch,
+    _worktree_add,
+    _worktree_path_for_branch,
+    _worktree_remove,
     update_from_main,
 )
 
@@ -341,6 +344,170 @@ class TestUpdateFromMainHandler(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 update_from_main(args)
         self.assertEqual(cm.exception.code, 1)
+
+
+# ---------------------------------------------------------------------------
+# _worktree_path_for_branch
+# ---------------------------------------------------------------------------
+
+class TestWorktreePathForBranch(unittest.TestCase):
+    def test_strips_prefix_and_formats_path(self) -> None:
+        root = Path("/fake/myrepo")
+        result = _worktree_path_for_branch("ai/AI-029-some-slug", root)
+        self.assertEqual(result, Path("/fake/myrepo.worktrees/AI-029-some-slug"))
+
+    def test_works_without_ai_prefix(self) -> None:
+        root = Path("/fake/myrepo")
+        result = _worktree_path_for_branch("AI-029-some-slug", root)
+        self.assertEqual(result, Path("/fake/myrepo.worktrees/AI-029-some-slug"))
+
+
+# ---------------------------------------------------------------------------
+# _process_branch — no-worktree path (allow_no_worktree=True)
+# ---------------------------------------------------------------------------
+
+class TestProcessBranchNoWorktree(unittest.TestCase):
+
+    _TEMP_PATH = Path("/fake/repo.worktrees/AI-001-task")
+
+    def _run(self, apply, *, merged=False, ahead=2, add_ok=True, merge_ok=True,
+             remove_ok=True):
+        merged_set = ({"ai/AI-001-task"} if merged else set(), set())
+        with patch("_update_from_main._merged_into_main", return_value=merged_set), \
+             patch("_update_from_main._find_worktree_for_branch", return_value=None), \
+             patch("_update_from_main._commits_main_ahead", return_value=ahead), \
+             patch("_update_from_main._worktree_path_for_branch",
+                   return_value=self._TEMP_PATH), \
+             patch("_update_from_main._worktree_add",
+                   return_value=(add_ok, "" if add_ok else "add failed")), \
+             patch("_update_from_main._merge_main",
+                   return_value=(merge_ok, "ok" if merge_ok else "CONFLICT details")), \
+             patch("_update_from_main._worktree_remove",
+                   return_value=(remove_ok, "")):
+            return _process_branch("ai/AI-001-task", "AI-001", _ROOT, apply,
+                                   allow_no_worktree=True)
+
+    def test_skips_merged_branch(self) -> None:
+        r = self._run(apply=True, merged=True)
+        self.assertEqual(r.outcome, "skipped_merged")
+
+    def test_already_current_when_zero_ahead(self) -> None:
+        r = self._run(apply=True, ahead=0)
+        self.assertEqual(r.outcome, "already_current")
+
+    def test_error_when_rev_list_fails(self) -> None:
+        r = self._run(apply=True, ahead=-1)
+        self.assertEqual(r.outcome, "error")
+
+    def test_dry_run_reports_temp_worktree(self) -> None:
+        r = self._run(apply=False)
+        self.assertEqual(r.outcome, "dry_run_no_worktree")
+        self.assertIn("temporary worktree", r.detail)
+        self.assertIn("--apply", r.detail)
+
+    def test_apply_successful_cleans_up_worktree(self) -> None:
+        r = self._run(apply=True, merge_ok=True)
+        self.assertEqual(r.outcome, "updated")
+        self.assertIn("cleaned up", r.detail)
+
+    def test_apply_conflict_leaves_worktree_with_path(self) -> None:
+        r = self._run(apply=True, merge_ok=False)
+        self.assertEqual(r.outcome, "conflict")
+        self.assertIn(str(self._TEMP_PATH), r.detail)
+        self.assertIn("manual resolution", r.detail)
+
+    def test_apply_worktree_add_failure_returns_error(self) -> None:
+        r = self._run(apply=True, add_ok=False)
+        self.assertEqual(r.outcome, "error")
+        self.assertIn("temporary worktree", r.detail)
+
+    def test_default_allow_no_worktree_false_still_skips(self) -> None:
+        """Without allow_no_worktree, no-worktree branches are still skipped."""
+        merged_set = (set(), set())
+        with patch("_update_from_main._merged_into_main", return_value=merged_set), \
+             patch("_update_from_main._find_worktree_for_branch", return_value=None):
+            r = _process_branch("ai/AI-001-task", "AI-001", _ROOT, False)
+        self.assertEqual(r.outcome, "skipped_no_worktree")
+
+
+# ---------------------------------------------------------------------------
+# update_from_main handler — include_no_worktree flag
+# ---------------------------------------------------------------------------
+
+_BRANCH_FIRST_CFG = {"mode": "branch_first"}
+_NO_WORKTREE_RESULT = _UpdateResult("ai/AI-002-nwt", "AI-002", "dry_run_no_worktree",
+                                    "2 commits — temp worktree would be created")
+_DRY_RUN_RESULT = _UpdateResult("ai/AI-001-task", "AI-001", "dry_run", "2 commits pending")
+
+
+class TestUpdateFromMainNoWorktreeFlag(unittest.TestCase):
+    """Tests that --include-no-worktree is threaded through to _process_branch."""
+
+    def _make_args(self, task_id=None, update_all=False, apply=False,
+                   include_no_worktree=False):
+        return argparse.Namespace(task_id=task_id, update_all=update_all, apply=apply,
+                                  include_no_worktree=include_no_worktree)
+
+    def test_all_without_flag_passes_false(self) -> None:
+        """--all without --include-no-worktree calls _process_branch with allow_no_worktree=False."""
+        branches = ["ai/AI-001-task"]
+        args = self._make_args(update_all=True)
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._list_local_branches", return_value=branches), \
+             patch("_update_from_main._read_task_meta_from_branch",
+                   return_value={"status": "in_progress"}), \
+             patch("_update_from_main._process_branch",
+                   return_value=_DRY_RUN_RESULT) as mock_proc, \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
+        mock_proc.assert_called_once_with(
+            "ai/AI-001-task", "AI-001", _ROOT, False, allow_no_worktree=False
+        )
+
+    def test_all_with_flag_passes_true(self) -> None:
+        """--all --include-no-worktree calls _process_branch with allow_no_worktree=True."""
+        branches = ["ai/AI-002-nwt"]
+        args = self._make_args(update_all=True, include_no_worktree=True)
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._list_local_branches", return_value=branches), \
+             patch("_update_from_main._read_task_meta_from_branch",
+                   return_value={"status": "ready"}), \
+             patch("_update_from_main._process_branch",
+                   return_value=_NO_WORKTREE_RESULT) as mock_proc, \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
+        mock_proc.assert_called_once_with(
+            "ai/AI-002-nwt", "AI-002", _ROOT, False, allow_no_worktree=True
+        )
+
+    def test_single_task_always_passes_true(self) -> None:
+        """Single-task mode always uses allow_no_worktree=True."""
+        args = self._make_args(task_id="AI-001")
+        with patch("_update_from_main._run_git", side_effect=[
+            (True, ".git"), (True, "abc123"),
+        ]), \
+             patch("_update_from_main._parse_workflow_config",
+                   return_value=_BRANCH_FIRST_CFG), \
+             patch("_update_from_main.repo_root", return_value=_ROOT), \
+             patch("_update_from_main._find_branch_for_task",
+                   return_value="ai/AI-001-task"), \
+             patch("_update_from_main._process_branch",
+                   return_value=_DRY_RUN_RESULT) as mock_proc, \
+             patch("sys.stdout", new_callable=io.StringIO):
+            update_from_main(args)
+        mock_proc.assert_called_once_with(
+            "ai/AI-001-task", "AI-001", _ROOT, False, allow_no_worktree=True
+        )
 
 
 if __name__ == "__main__":

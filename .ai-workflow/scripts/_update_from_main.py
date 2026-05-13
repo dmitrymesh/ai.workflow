@@ -3,10 +3,12 @@
 Operates from the main/control-plane checkout.
 
 Usage:
-    update-from-main AI-026              # dry-run for one task
-    update-from-main AI-026 --apply      # merge main into AI-026 worktree
-    update-from-main --all               # dry-run for all active worktrees
-    update-from-main --all --apply       # merge main into all eligible worktrees
+    update-from-main AI-026                            # dry-run for one task
+    update-from-main AI-026 --apply                    # merge main into AI-026 worktree
+    update-from-main --all                             # dry-run for all worktree-backed tasks
+    update-from-main --all --apply                     # merge main into all eligible worktrees
+    update-from-main --all --include-no-worktree       # also include branches without worktrees
+    update-from-main --all --include-no-worktree --apply
 """
 from __future__ import annotations
 
@@ -96,6 +98,24 @@ def _merge_main(worktree_path: Path) -> Tuple[bool, str]:
     return result.returncode == 0, output
 
 
+def _worktree_path_for_branch(branch: str, root: Path) -> Path:
+    """Compute the standard worktree path for a task branch (same convention as claim)."""
+    slug = branch.split("/", 1)[-1].replace("/", "-")
+    return root.parent / f"{root.name}.worktrees" / slug
+
+
+def _worktree_add(branch: str, wt_path: Path, root: Path) -> Tuple[bool, str]:
+    """Add a git worktree for the given existing branch at wt_path."""
+    ok, out = _run_git(["worktree", "add", str(wt_path), branch], cwd=root)
+    return ok, out
+
+
+def _worktree_remove(wt_path: Path, root: Path) -> Tuple[bool, str]:
+    """Remove a git worktree."""
+    ok, out = _run_git(["worktree", "remove", str(wt_path)], cwd=root)
+    return ok, out
+
+
 def _find_branch_for_task(task_id: str) -> str:
     """Return the local branch name for a task ID, or raise SystemExit."""
     cfg = _discovery_cfg()
@@ -113,19 +133,59 @@ def _find_branch_for_task(task_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _process_branch(
-    branch: str, task_id: str, root: Path, apply: bool
+    branch: str, task_id: str, root: Path, apply: bool,
+    allow_no_worktree: bool = False,
 ) -> _UpdateResult:
-    """Compute or perform the update for one branch. Pure function of inputs."""
+    """Compute or perform the update for one branch.
+
+    When allow_no_worktree=True, branches without an existing local worktree
+    are handled by creating a temporary worktree, merging, then cleaning it up
+    on success (or leaving it in place on conflict for manual resolution).
+    """
     # Skip branches already merged into main
     merged_local, _ = _merged_into_main()
     if branch in merged_local:
         return _UpdateResult(branch, task_id, "skipped_merged", "already merged into main")
 
-    # Require a local worktree
+    # Find existing local worktree
     worktree = _find_worktree_for_branch(branch, root)
+
     if worktree is None:
-        return _UpdateResult(branch, task_id, "skipped_no_worktree",
-                             "no local worktree — open one to update this branch")
+        if not allow_no_worktree:
+            return _UpdateResult(branch, task_id, "skipped_no_worktree",
+                                 "no local worktree — open one to update this branch")
+
+        # No-worktree path: check if main has anything new first
+        ahead = _commits_main_ahead(branch, root)
+        if ahead == 0:
+            return _UpdateResult(branch, task_id, "already_current",
+                                 "branch already contains all commits from main")
+        if ahead < 0:
+            return _UpdateResult(branch, task_id, "error",
+                                 "could not compare branch to main (is 'main' a valid branch?)")
+
+        temp_path = _worktree_path_for_branch(branch, root)
+        if not apply:
+            return _UpdateResult(branch, task_id, "dry_run_no_worktree",
+                                 f"{ahead} commit(s) from main pending — "
+                                 f"a temporary worktree would be created at {temp_path}, "
+                                 "run with --apply to merge")
+
+        # Apply: create temporary worktree, merge, clean up on success
+        ok, err = _worktree_add(branch, temp_path, root)
+        if not ok:
+            return _UpdateResult(branch, task_id, "error",
+                                 f"failed to create temporary worktree at {temp_path}: {err}")
+        success, msg = _merge_main(temp_path)
+        if success:
+            _worktree_remove(temp_path, root)
+            return _UpdateResult(branch, task_id, "updated",
+                                 (msg or "Merge complete.") + " Temporary worktree cleaned up.")
+        return _UpdateResult(branch, task_id, "conflict",
+                             f"merge conflict — worktree left at {temp_path} for manual resolution\n"
+                             f"To resolve: cd {temp_path} && git merge --continue\n{msg}")
+
+    # Existing worktree path (unchanged)
 
     # Check if already up to date
     ahead = _commits_main_ahead(branch, root)
@@ -163,19 +223,20 @@ def _process_branch(
 # ---------------------------------------------------------------------------
 
 _OUTCOME_LABEL = {
-    "updated":              "Updated",
-    "already_current":      "Already current",
-    "dry_run":              "Would update (dry-run — use --apply)",
-    "skipped_dirty":        "Skipped — dirty worktree",
-    "skipped_no_worktree":  "Skipped — no local worktree",
-    "skipped_merged":       "Skipped — merged into main",
-    "skipped_inactive":     "Skipped — inactive status (done/rejected)",
-    "conflict":             "CONFLICT — manual resolution required",
-    "error":                "Error",
+    "updated":                "Updated",
+    "already_current":        "Already current",
+    "dry_run":                "Would update (dry-run — use --apply)",
+    "dry_run_no_worktree":    "Would update via temporary worktree (dry-run — use --apply)",
+    "skipped_dirty":          "Skipped — dirty worktree",
+    "skipped_no_worktree":    "Skipped — no local worktree",
+    "skipped_merged":         "Skipped — merged into main",
+    "skipped_inactive":       "Skipped — inactive status (done/rejected)",
+    "conflict":               "CONFLICT — manual resolution required",
+    "error":                  "Error",
 }
 
 _OUTCOME_ORDER = [
-    "updated", "already_current", "dry_run",
+    "updated", "already_current", "dry_run", "dry_run_no_worktree",
     "skipped_dirty", "skipped_no_worktree", "skipped_merged", "skipped_inactive",
     "conflict", "error",
 ]
@@ -226,6 +287,7 @@ def update_from_main(args: argparse.Namespace) -> None:
     task_id: Optional[str] = getattr(args, "task_id", None)
     update_all: bool = getattr(args, "update_all", False)
     apply: bool = getattr(args, "apply", False)
+    include_no_worktree: bool = getattr(args, "include_no_worktree", False)
 
     if not task_id and not update_all:
         raise SystemExit("Specify a task ID or use --all.")
@@ -241,7 +303,9 @@ def update_from_main(args: argparse.Namespace) -> None:
     if task_id:
         branch = _find_branch_for_task(task_id)
         print(f"Target: {task_id}  ({branch})")
-        results.append(_process_branch(branch, task_id, root, apply))
+        # Single-task mode always allows no-worktree update
+        results.append(_process_branch(branch, task_id, root, apply,
+                                       allow_no_worktree=True))
     else:
         disc_cfg = _discovery_cfg()
         prefix = disc_cfg["branch_prefix"]
@@ -255,7 +319,8 @@ def update_from_main(args: argparse.Namespace) -> None:
                 results.append(_UpdateResult(branch, tid, "skipped_inactive",
                                              f"status={status}"))
                 continue
-            results.append(_process_branch(branch, tid, root, apply))
+            results.append(_process_branch(branch, tid, root, apply,
+                                           allow_no_worktree=include_no_worktree))
 
     _print_summary(results)
 
