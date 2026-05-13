@@ -37,6 +37,18 @@ Recommended risk levels:
 - medium: integration work, runtime flow changes, UI logic
 - high: save/load, monetization, purchases, large refactors, scene/prefab changes
 
+**Authorizing Unity serialized asset changes:**
+
+When a task requires changing `.unity`, `.prefab`, `.asset`, or `.meta` files
+through Unity MCP or Editor tooling, the task contract must explicitly include:
+
+- The specific scenes, prefabs, or asset files in scope (name them as precisely as practical).
+- A statement that Unity MCP or Editor-backed tooling will be used — not direct YAML edits.
+- Validation expectations (e.g., "Unity compiles without errors; PlayMode test X passes").
+
+Set risk to `high` unless the change is tightly isolated (e.g., one property on one prefab).
+Direct hand edits to Unity serialized YAML are unsafe and remain forbidden by default.
+
 Splitting broad requests:
 
 - If a user request is too large for one reviewable PR, split it into multiple smaller tasks.
