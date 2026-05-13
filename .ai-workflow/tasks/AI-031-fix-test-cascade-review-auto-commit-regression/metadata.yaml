@@ -1,6 +1,6 @@
 id: "AI-031"
 title: "Fix test cascade review auto-commit regression"
-status: "ready"
+status: "in_progress"
 risk: "low"
 area:
   - workflow
