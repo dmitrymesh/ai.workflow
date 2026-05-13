@@ -1,4 +1,4 @@
-decision: "pending"
-reviewer: null
-reviewed_at: null
-notes: ""
+decision: "approve"
+reviewer: "codex"
+reviewed_at: "2026-05-13"
+notes: "Implementation satisfies AI-022 acceptance criteria."
