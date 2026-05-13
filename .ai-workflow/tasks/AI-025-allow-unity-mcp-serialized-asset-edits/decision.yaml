@@ -1,4 +1,4 @@
 decision: "changes_requested"
 reviewer: "codex"
 reviewed_at: "2026-05-13"
-notes: "Docs say direct Unity YAML edits are never allowed, but task requires an explicit-request exception."
+notes: "Manager and reviewer guidance still conflict with the direct-YAML explicit-request exception."
