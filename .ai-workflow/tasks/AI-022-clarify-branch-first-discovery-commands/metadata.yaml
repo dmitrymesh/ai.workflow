@@ -1,6 +1,6 @@
 id: "AI-022"
 title: "Clarify branch-first discovery commands"
-status: "in_progress"
+status: "ready_for_review"
 risk: "low"
 area:
   - workflow
