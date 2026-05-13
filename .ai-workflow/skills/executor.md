@@ -140,6 +140,10 @@ python .ai-workflow/scripts/ai_task.py update-from-main <TASK-ID>
 python .ai-workflow/scripts/ai_task.py update-from-main <TASK-ID> --apply
 ```
 
+Single-task mode works even when no local worktree exists yet — a temporary
+worktree is created, main is merged, then cleaned up automatically. On conflict
+the temporary worktree is left in place for manual resolution.
+
 The command refuses dirty worktrees and reports conflicts without
 auto-resolving them.
 

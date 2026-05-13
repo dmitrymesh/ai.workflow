@@ -445,13 +445,24 @@ python .ai-workflow/scripts/ai_task.py update-from-main --all
 # Apply: merge main into the worktree(s)
 python .ai-workflow/scripts/ai_task.py update-from-main AI-003 --apply
 python .ai-workflow/scripts/ai_task.py update-from-main --all --apply
+
+# Include branches that have no local worktree (bulk mode only)
+python .ai-workflow/scripts/ai_task.py update-from-main --all --include-no-worktree
+python .ai-workflow/scripts/ai_task.py update-from-main --all --include-no-worktree --apply
 ```
 
 **What the command does:**
 
-- **Single task**: targets the specified task's local branch/worktree only.
+- **Single task**: targets the specified task branch. Works even when no local
+  worktree exists — a temporary worktree is created, main is merged, and on
+  success the temporary worktree is cleaned up automatically.
 - **`--all`**: scans all local task branches and processes those that are
-  active (not merged into `main`) and have a local worktree.
+  active (not merged into `main`) and have a local worktree. Branches without
+  a local worktree are reported as skipped unless `--include-no-worktree` is
+  also passed.
+- **`--include-no-worktree`**: with `--all`, also processes active branches
+  that have no local worktree. A temporary worktree is created for each,
+  merged, and cleaned up on success.
 - **Dry-run** (default): reports which branches would be updated, already
   current, or skipped — no git changes are made.
 - **`--apply`**: runs `git merge main` inside each eligible worktree.
@@ -461,15 +472,20 @@ python .ai-workflow/scripts/ai_task.py update-from-main --all --apply
 - Merged task branches are always skipped.
 - Dirty worktrees (uncommitted changes) are skipped and reported.
 - Already-current branches are reported without creating empty commits.
-- Merge conflicts leave the worktree in a normal conflict state for manual
-  resolution; the command reports the conflict, continues processing remaining
-  branches (with `--all`), and exits with a non-zero status at the end.
+- Merge conflicts leave the worktree in place for manual resolution; the
+  command reports the conflict and the worktree path, continues processing
+  remaining branches (with `--all`), and exits with a non-zero status.
 - The main checkout branch is never changed.
+- Temporary worktrees created for no-worktree branches are cleaned up
+  automatically on successful merge. On conflict they are left in place so
+  you can resolve and continue.
 
 **When to use:**
 
 Run before starting new work in a task worktree, or periodically during long
 tasks to incorporate upstream fixes and reduce conflict risk at merge time.
+Use `--include-no-worktree` when draft tasks created by the manager need to
+be kept current before an executor opens them.
 
 ### Cleanup
 
