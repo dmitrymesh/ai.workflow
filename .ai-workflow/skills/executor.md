@@ -89,19 +89,29 @@ inside the worktree.
 
 **Branch-first mode (`workflow.mode: branch_first`):**
 
-The manager created the task branch before the executor starts. Add a worktree
-to the pre-existing branch; do not create a new one.
+The manager created the task branch before the executor starts. Use `claim`
+from the main checkout — it detects the existing branch and adds a worktree
+without `-b`:
 
 ```bash
-# From the main checkout — open a worktree on the existing task branch:
-git worktree add ../<repo>.worktrees/<TASK-ID>-<slug> ai/<TASK-ID>-<slug>
-cd ../<repo>.worktrees/<TASK-ID>-<slug>
+python .ai-workflow/scripts/ai_task.py claim <TASK-ID>
+cd <printed worktree path>
+git branch --show-current   # must be ai/<TASK-ID>-<slug>
 ```
 
-Verify the branch, then record your claim:
+`claim` updates `metadata.yaml` to `in_progress` in the worktree and prints
+the commit command. Commit the status change before starting work:
 
 ```bash
-git branch --show-current   # must be ai/<TASK-ID>-<slug>
+git add .ai-workflow/tasks/<TASK-ID>-<slug>/metadata.yaml
+git commit -m "chore: <TASK-ID> | claim task to in_progress"
+```
+
+If you prefer to add the worktree manually (e.g. in a script):
+
+```bash
+git worktree add ../<repo>.worktrees/<TASK-ID>-<slug> ai/<TASK-ID>-<slug>
+cd ../<repo>.worktrees/<TASK-ID>-<slug>
 python .ai-workflow/scripts/ai_task.py move <TASK-ID> in_progress
 git add <task-folder>/metadata.yaml
 git commit -m "chore: <TASK-ID> | claim task to in_progress"

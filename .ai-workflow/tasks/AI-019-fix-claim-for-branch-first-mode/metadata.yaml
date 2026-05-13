@@ -1,0 +1,20 @@
+id: "AI-019"
+title: "Fix claim for branch-first mode"
+status: "done"
+risk: "low"
+area:
+  - workflow
+  - cli
+  - git
+owner: null
+reviewer: null
+branch: "ai/AI-019-fix-claim-for-branch-first-mode"
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related: []
+created_at: "2026-05-09"
+updated_at: "2026-05-13"
