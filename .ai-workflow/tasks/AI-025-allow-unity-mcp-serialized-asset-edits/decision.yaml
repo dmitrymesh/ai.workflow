@@ -1,4 +1,4 @@
-decision: null
-reviewer: null
-reviewed_at: null
-notes: "Not reviewed."
+decision: "changes_requested"
+reviewer: "codex"
+reviewed_at: "2026-05-13"
+notes: "Docs say direct Unity YAML edits are never allowed, but task requires an explicit-request exception."
