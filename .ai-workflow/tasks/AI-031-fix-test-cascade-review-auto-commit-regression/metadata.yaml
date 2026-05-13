@@ -1,8 +1,11 @@
 id: "AI-031"
 title: "Fix test cascade review auto-commit regression"
-status: "draft"
+status: "ready"
 risk: "low"
-area: [workflow, cli, tests]
+area:
+  - workflow
+  - cli
+  - tests
 owner: null
 reviewer: null
 branch: null
