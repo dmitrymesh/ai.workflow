@@ -1,4 +1,4 @@
-decision: "changes_requested"
+decision: "approve"
 reviewer: "codex"
 reviewed_at: "2026-05-13"
-notes: "Candidate selection includes merged non-task worktrees; prune must be limited to task branches."
+notes: "Task-branch filtering was added; implementation satisfies AI-024 acceptance criteria."
