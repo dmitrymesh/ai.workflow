@@ -73,6 +73,7 @@ from _tasks import create_task, human_request_changes, move_task, print_task_pat
 from _validate import validate
 from _update_from_main import update_from_main
 from _worktree import claim_task, prepare_worktree
+from _prune import prune_worktrees
 
 
 def _parse_agents_from_config(config_path: Path) -> dict:
@@ -339,6 +340,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Actually perform merges (default: dry-run, reports what would happen).",
     )
     p_update.set_defaults(func=update_from_main)
+
+    p_prune = sub.add_parser(
+        "prune-worktrees",
+        help=(
+            "List worktrees whose branches are merged into main. "
+            "Default is dry-run (list only); use --apply to remove them."
+        ),
+    )
+    p_prune.add_argument(
+        "--apply",
+        action="store_true",
+        help="Remove merged worktrees (skips dirty ones; fails on removal errors)",
+    )
+    p_prune.set_defaults(func=prune_worktrees)
 
     return parser
 

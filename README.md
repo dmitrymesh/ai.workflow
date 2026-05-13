@@ -413,6 +413,19 @@ git worktree remove ../<repo>.worktrees/AI-001-<slug>
 git branch -d ai/AI-001-<slug>
 ```
 
+To clean up multiple merged worktrees at once, use `prune-worktrees`:
+
+```bash
+# List all worktrees whose branches are already merged into main:
+python .ai-workflow/scripts/ai_task.py prune-worktrees
+
+# Remove them (skips dirty worktrees and reports failures):
+python .ai-workflow/scripts/ai_task.py prune-worktrees --apply
+```
+
+The command never touches the main checkout, active unmerged task worktrees, or
+worktrees with uncommitted changes.
+
 ## Unity profile
 
 The Unity profile adds guardrails for Unity projects.
