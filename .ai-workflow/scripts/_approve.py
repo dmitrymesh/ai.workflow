@@ -10,13 +10,12 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from _core import dump_simple_yaml, repo_root, today, write_text
+from _core import dump_simple_yaml, parse_simple_yaml_str, repo_root, today, write_text
 from _discovery import (
     _discovery_cfg,
     _list_local_branches,
     _list_remote_branches,
     _ls_task_folder_paths,
-    _parse_yaml_string,
     _run_git,
     _task_id_from_branch,
 )
@@ -57,7 +56,7 @@ def _read_task_folder_and_meta(
         if Path(folder_path).name.upper().startswith(task_id.upper()):
             ok, content = _run_git(["show", f"{branch}:{folder_path}/metadata.yaml"])
             if ok and content:
-                return folder_path, _parse_yaml_string(content)
+                return folder_path, parse_simple_yaml_str(content)
     raise SystemExit(
         f"Task folder or metadata.yaml not found on branch '{branch}' for {task_id}."
     )

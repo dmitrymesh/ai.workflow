@@ -106,28 +106,24 @@ def render_template(name: str, values: Dict[str, Any]) -> str:
 # Minimal YAML parser / dumper
 # ---------------------------------------------------------------------------
 
-def parse_simple_yaml(path: Path) -> Dict[str, Any]:
+def parse_simple_yaml_str(text: str) -> Dict[str, Any]:
     """
     Minimal YAML parser for this workflow's simple metadata files.
 
     Supports:
     - key: value
-    - key: null
+    - key: null / true / false
     - key: [a, b]
     - quoted strings
-    - simple nested blocks are treated as raw strings where possible
+    - simple list blocks (  - item)
 
     For advanced YAML, install PyYAML and replace this function.
     """
     data: Dict[str, Any] = {}
-    if not path.exists():
-        return data
-
-    lines = path.read_text(encoding="utf-8").splitlines()
     current_key: Optional[str] = None
     current_list: Optional[List[str]] = None
 
-    for raw in lines:
+    for raw in text.splitlines():
         line = raw.rstrip()
         if not line.strip() or line.strip().startswith("#"):
             continue
@@ -169,6 +165,13 @@ def parse_simple_yaml(path: Path) -> Dict[str, Any]:
             data[key] = value.strip('"').strip("'")
 
     return data
+
+
+def parse_simple_yaml(path: Path) -> Dict[str, Any]:
+    """Read a YAML metadata file and parse it with parse_simple_yaml_str."""
+    if not path.exists():
+        return {}
+    return parse_simple_yaml_str(path.read_text(encoding="utf-8"))
 
 
 def dump_simple_yaml(data: Dict[str, Any]) -> str:

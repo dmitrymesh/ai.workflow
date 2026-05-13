@@ -17,7 +17,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from _core import repo_root, workflow_root
+from _core import parse_simple_yaml_str, repo_root, workflow_root
 
 
 # ---------------------------------------------------------------------------
@@ -196,46 +196,6 @@ def _ls_task_folder_paths(branch: str) -> List[str]:
     return paths
 
 
-def _parse_yaml_string(text: str) -> Dict[str, Any]:
-    """Parse a simple YAML document from a string (mirrors _core.parse_simple_yaml)."""
-    data: Dict[str, Any] = {}
-    current_key: Optional[str] = None
-    current_list: Optional[List[str]] = None
-
-    for raw in text.splitlines():
-        line = raw.rstrip()
-        if not line.strip() or line.strip().startswith("#"):
-            continue
-        if line.startswith("  - ") and current_key:
-            if current_list is None:
-                current_list = []
-                data[current_key] = current_list
-            current_list.append(line[4:].strip().strip('"').strip("'"))
-            continue
-        if ":" not in line:
-            continue
-        current_list = None
-        current_key = None
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
-        if value == "":
-            current_key = key
-            data[key] = {}
-        elif value in ("null", "None", "~"):
-            data[key] = None
-        elif value.startswith("[") and value.endswith("]"):
-            inner = value[1:-1].strip()
-            data[key] = (
-                []
-                if not inner
-                else [i.strip().strip('"').strip("'") for i in inner.split(",")]
-            )
-        else:
-            data[key] = value.strip('"').strip("'")
-    return data
-
-
 def _read_task_meta_from_branch(
     branch: str, task_id: str
 ) -> Optional[Dict[str, Any]]:
@@ -252,7 +212,7 @@ def _read_task_meta_from_branch(
             meta_path = f"{folder_path}/metadata.yaml"
             ok, content = _run_git(["show", f"{branch}:{meta_path}"])
             if ok and content:
-                return _parse_yaml_string(content)
+                return parse_simple_yaml_str(content)
     return None
 
 
