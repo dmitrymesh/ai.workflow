@@ -178,6 +178,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_review.add_argument("task_id")
     p_review.add_argument("--approve", action="store_true")
     p_review.add_argument("--changes-requested", action="store_true", dest="changes_requested")
+    p_review.add_argument(
+        "--no-commit",
+        action="store_true",
+        dest="no_commit",
+        help="Write review artifacts but do not commit (default: auto-commit to task branch)",
+    )
     p_review.set_defaults(func=review_task)
 
     p_hrc = sub.add_parser(

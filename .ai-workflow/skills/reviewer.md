@@ -36,14 +36,19 @@ CLI commands you may run:
 - `python .ai-workflow/scripts/ai_task.py review <TASK-ID> --changes-requested` — moves `ready_for_review → changes_requested`
 - `python .ai-workflow/scripts/ai_task.py move <TASK-ID> rejected` — rejects the task
 
-**Commit discipline:** After writing `review.md` and running the review command,
-commit the artifacts to the task branch **before** handing off:
+**Commit discipline:** After writing `review.md`, run the review command — it
+commits `metadata.yaml`, `review.md`, and `decision.yaml` to the task branch
+automatically:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py review <TASK-ID> --approve   # or --changes-requested
+```
 
-git add <task-folder>/review.md <task-folder>/decision.yaml <task-folder>/metadata.yaml
-git commit -m "review: <TASK-ID> approve|changes-requested <short reason>"
+Use `--no-commit` only in constrained environments where git operations are not
+available (the files are written but the commit step is skipped):
+
+```bash
+python .ai-workflow/scripts/ai_task.py review <TASK-ID> --approve --no-commit
 ```
 
 A review decision that is only on disk but not committed is invisible to the

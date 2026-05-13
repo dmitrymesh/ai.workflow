@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 
 from _board import generate_board
 from _core import (
@@ -15,6 +16,7 @@ from _core import (
     normalize_meta,
     remove_if_present,
     render_template,
+    repo_root,
     save_meta,
     slugify,
     tasks_root,
@@ -174,6 +176,61 @@ def _cascade_parent_done(task_id: str) -> list:
     return auto_done
 
 
+def _commit_review_artifacts(task_dir, task_id: str, decision: str) -> None:
+    """Stage and commit review artifacts for task_id on the current branch.
+
+    Only the known task-folder files are staged so unrelated dirty files are
+    never included in the review commit.
+    """
+    root = repo_root()
+    try:
+        rel_task = task_dir.relative_to(root)
+    except ValueError:
+        raise SystemExit(
+            f"Task directory {task_dir} is not inside repo root {root}. "
+            "Cannot commit review artifacts."
+        )
+
+    candidates = ["metadata.yaml", "review.md", "decision.yaml"]
+    to_stage = [rel_task.as_posix() + "/" + f for f in candidates if (task_dir / f).exists()]
+
+    if not to_stage:
+        print("Warning: no review artifacts found to commit.")
+        return
+
+    manual = (
+        f"  git add {' '.join(to_stage)}\n"
+        f"  git commit -m 'review: {task_id} | {decision}' -- {' '.join(to_stage)}"
+    )
+
+    def _git(git_args: list) -> None:
+        result = subprocess.run(
+            ["git"] + git_args, cwd=str(root), capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            detail = result.stderr.strip() or result.stdout.strip()
+            raise SystemExit(
+                f"git {git_args[0]} failed: {detail}\n"
+                f"Review files were written but NOT committed. Commit manually:\n{manual}"
+            )
+
+    _git(["add"] + to_stage)
+
+    # Check only our specific files — ignore any other pre-staged changes.
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--quiet", "--"] + to_stage,
+        cwd=str(root), capture_output=True
+    )
+    if staged.returncode == 0:
+        print("Review artifacts already committed — nothing new to stage.")
+        return
+
+    # Pass pathspecs to git commit so only the task-folder files are committed
+    # even if the reviewer has unrelated staged changes in the index.
+    _git(["commit", "-m", f"review: {task_id} | {decision}", "--"] + to_stage)
+    print(f"Committed review artifacts.")
+
+
 def review_task(args: argparse.Namespace) -> None:
     """Reviewer action: approve (-> done) or request changes (-> changes_requested)."""
     task_dir, meta = find_task(args.task_id)
@@ -207,6 +264,10 @@ def review_task(args: argparse.Namespace) -> None:
         auto_done = _cascade_parent_done(task_id)
 
     generate_board(print_result=False)
+
+    if not getattr(args, "no_commit", False):
+        _commit_review_artifacts(task_dir, task_id, target)
+
     print(f"Reviewed {task_id}: {current_status} -> {target}")
     for dep_id in unblocked:
         print(f"  Unblocked: {dep_id}")
