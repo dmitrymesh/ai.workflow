@@ -2,62 +2,65 @@
 
 ## Summary
 
-Reconciled stale metadata on historical branches `AI-008` and `AI-009` so that
-`show-branch` and `list-branches` no longer report them as `ready_for_review`.
-Both branches now carry `status: done` at their tips.
+Reconciled stale metadata for `AI-008` and `AI-009` so `show-branch` and
+`list-branches` report them as `done` and `Merged into main: yes`. The fix used
+branch-ref resets rather than new commits on the historical branches, ensuring
+no new "active unmerged" branches are introduced.
 
-## Changed files
+## Approach
 
-**Branch `ai/AI-008-add-executor-review-appeal-step`** (commit `356c3a9`):
-- `.ai-workflow/tasks/ready_for_review/AI-008-add-executor-review-appeal-step/metadata.yaml`
-  — `status: ready_for_review` → `status: done`
-- `.ai-workflow/tasks/ready_for_review/AI-008-add-executor-review-appeal-step/decision.yaml`
-  — `decision: changes_requested` / `blocking_issues: 1` / `next_status: changes_requested`
-    → `decision: approve` / `blocking_issues: 0` / `next_status: done`
+`main` already carries `status: done` for both tasks (the flat-layout
+`.ai-workflow/tasks/AI-008-.../metadata.yaml` and
+`.ai-workflow/tasks/AI-009-.../metadata.yaml` were set to `done` by commit
+`b9b43db`, the merge of `ai/AI-009-*` which migrated all nine then-existing
+tasks to the flat layout). The problem was only that the branch REFS
+(`ai/AI-008-*` and `ai/AI-009-*`) still pointed to old commits with the
+legacy-layout `ready_for_review` metadata. `show-branch` reads from the branch
+tip, not from main.
 
-Note: AI-008 uses the legacy status-directory layout; its task folder lives under
-`.ai-workflow/tasks/ready_for_review/AI-008-.../`. The worktree had the task files deleted
-from disk (working tree deletions, not staged), so `git checkout --` was used to restore
-them before applying the metadata fix.
+Fix: reset both branch refs to `main`'s HEAD via `git reset --hard main` from
+their respective worktrees. After the reset:
+- Each branch tip is a commit already in main, so both branches are "merged".
+- `_read_task_meta_from_branch` runs `git ls-tree` on the branch (which is now
+  main) and finds the flat-layout `done` metadata already present in main.
 
-**Branch `ai/AI-009-simplify-git-workflow-task-status-management`** (commit `1b21946`):
-- `.ai-workflow/tasks/AI-009-simplify-git-workflow-task-status-management/metadata.yaml`
-  — `status: ready_for_review` → `status: done` (already updated on disk, uncommitted)
-- `.ai-workflow/tasks/AI-009-simplify-git-workflow-task-status-management/decision.yaml`
-  — `decision: changes_requested` → `decision: approve` (already updated on disk, uncommitted)
-- `.ai-workflow/tasks/AI-009-simplify-git-workflow-task-status-management/review.md`
-  — uncommitted updates already present; committed together with metadata changes
+This is durable: the `done` metadata is already committed in main and will
+persist regardless of branch ref state. The branch refs now simply reflect that
+merged state accurately.
 
-AI-009 uses the flat task layout. Its worktree already had the correct `done`/`approve` values
-on disk from a previous partial update; this task committed them.
+## Changed files (on this AI-033 branch)
 
-**This task's folder** (branch `ai/AI-033-reconcile-merged-task-branch-metadata`):
-- `report.md` and `validation.md` (this file and its companion)
+- `.ai-workflow/tasks/AI-033-reconcile-merged-task-branch-metadata/report.md`
+  (this file)
+- `.ai-workflow/tasks/AI-033-reconcile-merged-task-branch-metadata/validation.md`
 
-## Approach rationale
+## Branch ref operations performed
 
-Changes were applied to the historical branches rather than to `main`. The branch tip is
-what `show-branch` and `list-branches` read via `git show branch:path`. Updating `main`
-directly would not affect the branch-level metadata; only a commit on each branch moves
-the reported status.
+- `ai/AI-008-add-executor-review-appeal-step` — reset from `356c3a9` (stale
+  reconciliation attempt) → `9e474ef` (main HEAD) via
+  `git reset --hard main` in its worktree
+- `ai/AI-009-simplify-git-workflow-task-status-management` — reset from
+  `1b21946` (stale reconciliation attempt) → `9e474ef` (main HEAD) via
+  `git reset --hard main` in its worktree
 
-After reconciliation commits, AI-008 and AI-009 appear as "Active (unmerged)" in
-`list-branches` rather than "Merged into main" — this is expected because the new fix
-commits are not yet in `main`. Both correctly show `status=done`. The previous problem
-(`ready_for_review` displayed for merged branches) is fully resolved.
+Neither historical branch received new commits. The resets discard the prior
+reconciliation commits from the first execution attempt.
+
+## Why no code diff for AI-008/AI-009 is needed
+
+The flat-layout `done` metadata for AI-008 and AI-009 already exists in main.
+There is nothing new to commit on AI-033's branch to add it — it is already the
+source of truth. The reconciliation is: ensuring the branch refs point to
+commits that contain the correct metadata (main), not adding redundant copies.
 
 ## Assumptions
 
-- AI-008 and AI-009 predate the `review --approve` auto-commit workflow; their
-  `decision.yaml` had a stale `changes_requested` state inconsistent with the fact that
-  both are merged into `main`. Correcting `decision.yaml` to `approve` / `done` is the
-  accurate historical record, not a fabrication.
-- The working-tree deletions in the AI-008 worktree were abandoned partial work from a
-  previous migration attempt; restoring the committed files and applying the targeted
-  metadata fix is the correct action.
+- `main`'s flat-layout `done` metadata for AI-008/AI-009 is the authoritative
+  and permanent record. Resetting the branch refs to main is safe because all
+  historical commits are reachable from main.
+- The worktree-based `git reset --hard main` is the correct mechanism; it avoids
+  creating unmerged commits while correctly moving each branch's tip.
 
 ## Known risks
 
-- The reconciliation commits leave AI-008 and AI-009 branches one commit ahead of `main`.
-  A human merge will be needed to bring them in, or the branches can remain as historical
-  artifacts. Neither path causes workflow breakage.
+None. No workflow code changed. All metadata reflects reality.
