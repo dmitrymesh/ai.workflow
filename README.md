@@ -129,24 +129,23 @@ python .ai-workflow/scripts/ai_task.py validate
 # 2. Check role assignments
 python .ai-workflow/scripts/ai_task.py roles
 
-# 3. Create a disposable smoke-test task
-python .ai-workflow/scripts/ai_task.py create "Smoke test" --risk low
-#    → note the printed task ID, e.g. AI-001
-
-# 4. Approve it (human step)
-python .ai-workflow/scripts/ai_task.py approve AI-001
-
-# 5. Confirm it appears as ready in branch-first discovery
+# 3. Scan the active task backlog
 python .ai-workflow/scripts/ai_task.py list-branches
 
-# 6. Clean up
-python .ai-workflow/scripts/ai_task.py move AI-001 rejected --force
+# 4. Browse done task history
+python .ai-workflow/scripts/ai_task.py history
 
-# 7. Validate again
-python .ai-workflow/scripts/ai_task.py validate
+# 5. Confirm CLI help is accessible
+python .ai-workflow/scripts/ai_task.py --help
 ```
 
-If both `validate` calls pass and `list-branches` showed the task as `ready`, the installation is working correctly.
+If `validate` passes and all commands run without errors, the installation is working correctly.
+
+> **Note on task creation:** In branch-first mode (`workflow.mode: branch_first`),
+> `create` puts the task folder in the current checkout but does **not** create the
+> task branch. A branch must be created and committed before `approve` will work.
+> See the "Recommended workflow" § "Manager prepares task" section below for the
+> full procedure, or the "Quick start" in `.ai-workflow/README.md`.
 
 ### Upgrade path
 
@@ -365,6 +364,22 @@ Validation
 ```
 
 The manager leaves the task in `draft` and reports that human approval is needed. The manager does not move the task to `ready`.
+
+In **branch-first** mode (`workflow.mode: branch_first`), the manager also creates and commits
+the task branch before returning to `main`:
+
+```bash
+# After creating the task folder, commit it to a dedicated task branch:
+python .ai-workflow/scripts/ai_task.py create "My task" --risk low
+#    → note the printed task ID (e.g. AI-001) and folder slug
+
+git checkout -b ai/AI-001-<slug>
+git add .ai-workflow/tasks/AI-001-<slug>/
+git commit -m "draft: AI-001 | My task"
+git checkout main
+```
+
+The task branch is the source of truth for all active task artifacts; `main` is the control plane.
 
 ### 2. Human approves task contract
 

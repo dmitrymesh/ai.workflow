@@ -142,13 +142,18 @@ python .ai-workflow/scripts/ai_task.py install-plan /path/to/target --apply
 ## Quick start
 
 ```bash
-# Manager: create the task contract (leaves it in draft)
+# Manager: create task folder and commit it to a task branch (branch-first mode)
 python .ai-workflow/scripts/ai_task.py create "Example task"
+#    → note the printed task ID (e.g. AI-001) and slug
+git checkout -b ai/AI-001-example-task
+git add .ai-workflow/tasks/AI-001-example-task/
+git commit -m "draft: AI-001 | Example task"
+git checkout main
 
 # Human: review task.md and approve the contract
 python .ai-workflow/scripts/ai_task.py approve AI-001
 
-# Executor: self-service claim — creates worktree, moves to in_progress
+# Executor: self-service claim — opens worktree, moves to in_progress
 python .ai-workflow/scripts/ai_task.py claim AI-001
 
 # (implement the task, then submit for review)
