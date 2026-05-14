@@ -1,6 +1,6 @@
 id: "AI-035"
 title: "Streamline README and remove stale protocol notes"
-status: "in_progress"
+status: "ready_for_review"
 risk: "low"
 area:
   - workflow
