@@ -760,7 +760,7 @@ is merged into `main`.
 
 #### `local_merge`
 
-The human (or a future CLI command) merges the branch locally:
+The human merges the branch locally:
 
 ```bash
 git checkout main
