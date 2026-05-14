@@ -1,8 +1,11 @@
 id: "AI-034"
 title: "Document installation and current branch-first quickstart"
-status: "draft"
+status: "ready"
 risk: "medium"
-area: [workflow, docs, install]
+area:
+  - workflow
+  - docs
+  - install
 owner: null
 reviewer: null
 branch: null
