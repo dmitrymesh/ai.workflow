@@ -1,8 +1,10 @@
 id: "AI-033"
 title: "Reconcile merged task branch metadata"
-status: "draft"
+status: "ready"
 risk: "low"
-area: [workflow, maintenance]
+area:
+  - workflow
+  - maintenance
 owner: null
 reviewer: null
 branch: null
