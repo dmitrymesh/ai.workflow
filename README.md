@@ -60,6 +60,10 @@ python .ai-workflow/scripts/ai_task.py install-plan /path/to/newproject --apply
 cd /path/to/newproject
 python .ai-workflow/scripts/ai_task.py init --profile generic   # or: --profile unity
 python .ai-workflow/scripts/ai_task.py validate
+
+# Commit the installed protocol
+git add .ai-workflow/ AGENTS.md CLAUDE.md .claude/
+git commit -m "chore: install ai-workflow protocol"
 ```
 
 All files are created fresh — no merge snippets are needed.
@@ -173,6 +177,58 @@ task data is never deleted or overwritten.
 | `CLAUDE.md` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
 | `.claude/commands/*` | Project (integration) | CREATE if absent; MERGE-REQUIRED if exists |
 | `README.md` | Project | Always SKIP |
+
+### What to commit after installation
+
+After `install-plan --apply`, `init`, and any manual merge-snippet edits:
+
+**New repository:**
+```bash
+git add .ai-workflow/ AGENTS.md CLAUDE.md .claude/
+git commit -m "chore: install ai-workflow protocol"
+```
+
+**Existing repository (after merging integration-point snippets):**
+```bash
+# Stage protocol-owned files updated by --apply
+git add .ai-workflow/
+# Stage any integration-point files you edited manually
+git add AGENTS.md CLAUDE.md .claude/commands/
+# Stage intentional config edits (profile, agents, workflow.mode, etc.)
+# git add .ai-workflow/config.yaml   # already included above
+git commit -m "chore: install/upgrade ai-workflow protocol"
+```
+
+**Do not commit:**
+- `.ai-workflow/board.md` — generated local cache; add to `.gitignore` if needed.
+- Unreviewed config changes you are still evaluating.
+
+**Upgrade (existing install):**
+Stage and commit only the protocol-owned files that changed:
+```bash
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
+# Review the diff, then:
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
+git add .ai-workflow/
+git commit -m "chore: upgrade ai-workflow protocol"
+```
+
+### Configuration checklist
+
+After `init`, open `.ai-workflow/config.yaml` and review these settings:
+
+| Setting | Options | When to change |
+|---------|---------|----------------|
+| `profile` | `generic` / `unity` | Set to `unity` for Unity projects; adds forbidden-file guardrails |
+| `workflow.mode` | `branch_first` / `main_first` | `branch_first` is current standard; `main_first` is legacy |
+| `workflow.integration.mode` | `local_merge` / `pull_request` | Use `pull_request` if your team merges via GitHub/GitLab PRs |
+| `workflow.integration.provider` | `github` / `gitlab` / `gitea` / `null` | Required when `integration.mode = pull_request` |
+| `agents.manager.default_tool` | any agent CLI name | The tool your manager role uses (e.g. `codex`, `claude`) |
+| `agents.executor.default_tool` | any agent CLI name | The tool your executor role uses |
+| `agents.reviewer.default_tool` | any agent CLI name | The tool your reviewer role uses |
+| `workflow.discovery.scope` | `local` / `remote` / `both` | Use `remote` or `both` if branches live on a shared remote |
+
+Run `python .ai-workflow/scripts/ai_task.py roles` to confirm the current role assignments after editing.
 
 ## Basic commands
 
