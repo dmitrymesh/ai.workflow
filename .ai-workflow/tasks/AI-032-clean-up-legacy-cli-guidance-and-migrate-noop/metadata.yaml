@@ -1,8 +1,12 @@
 id: "AI-032"
 title: "Clean up legacy CLI guidance and migrate noop"
-status: "draft"
+status: "ready"
 risk: "low"
-area: [workflow, cli, maintenance, docs]
+area:
+  - workflow
+  - cli
+  - maintenance
+  - docs
 owner: null
 reviewer: null
 branch: null
