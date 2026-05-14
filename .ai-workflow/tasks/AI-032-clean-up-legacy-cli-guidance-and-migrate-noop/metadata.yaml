@@ -1,6 +1,6 @@
 id: "AI-032"
 title: "Clean up legacy CLI guidance and migrate noop"
-status: "ready"
+status: "in_progress"
 risk: "low"
 area:
   - workflow
