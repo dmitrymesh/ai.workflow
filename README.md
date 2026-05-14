@@ -182,34 +182,47 @@ task data is never deleted or overwritten.
 
 After `install-plan --apply`, `init`, and any manual merge-snippet edits:
 
-**New repository:**
+**New repository** (no existing tasks — safe to stage all of `.ai-workflow/`):
 ```bash
 git add .ai-workflow/ AGENTS.md CLAUDE.md .claude/
 git commit -m "chore: install ai-workflow protocol"
 ```
 
 **Existing repository (after merging integration-point snippets):**
+
+Do not use `git add .ai-workflow/` — it will stage `.ai-workflow/tasks/` (project-owned)
+and `.ai-workflow/board.md` (generated). Instead, inspect what changed and stage only
+protocol-owned paths:
+
 ```bash
-# Stage protocol-owned files updated by --apply
-git add .ai-workflow/
-# Stage any integration-point files you edited manually
+# See what install-plan touched
+git status --short .ai-workflow/
+
+# Stage only protocol-owned subdirectories (never tasks/ or board.md)
+git add .ai-workflow/scripts/ .ai-workflow/skills/ .ai-workflow/config.yaml .ai-workflow/README.md
+# Stage any other .ai-workflow/ files shown by git status (excluding tasks/ and board.md)
+
+# Stage integration-point files you edited manually
 git add AGENTS.md CLAUDE.md .claude/commands/
-# Stage intentional config edits (profile, agents, workflow.mode, etc.)
-# git add .ai-workflow/config.yaml   # already included above
-git commit -m "chore: install/upgrade ai-workflow protocol"
+
+git commit -m "chore: install ai-workflow protocol"
 ```
 
 **Do not commit:**
+- `.ai-workflow/tasks/` — project-owned task data; never part of a protocol install commit.
 - `.ai-workflow/board.md` — generated local cache; add to `.gitignore` if needed.
-- Unreviewed config changes you are still evaluating.
 
 **Upgrade (existing install):**
-Stage and commit only the protocol-owned files that changed:
+
+Same principle — inspect first, stage only protocol-owned files:
 ```bash
 python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject
 # Review the diff, then:
 python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject --apply
-git add .ai-workflow/
+
+# Stage only the protocol-owned files that changed (never tasks/ or board.md)
+git status --short .ai-workflow/
+git add .ai-workflow/scripts/ .ai-workflow/skills/ .ai-workflow/config.yaml .ai-workflow/README.md
 git commit -m "chore: upgrade ai-workflow protocol"
 ```
 
@@ -227,6 +240,8 @@ After `init`, open `.ai-workflow/config.yaml` and review these settings:
 | `agents.executor.default_tool` | any agent CLI name | The tool your executor role uses |
 | `agents.reviewer.default_tool` | any agent CLI name | The tool your reviewer role uses |
 | `workflow.discovery.scope` | `local` / `remote` / `both` | Use `remote` or `both` if branches live on a shared remote |
+| `workflow.discovery.remote` | git remote name (default: `origin`) | Change if your remote is not named `origin` |
+| `workflow.discovery.branch_prefix` | branch prefix string (default: `ai/`) | Change only if your task branches use a different prefix |
 
 Run `python .ai-workflow/scripts/ai_task.py roles` to confirm the current role assignments after editing.
 
