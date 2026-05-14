@@ -4,8 +4,8 @@
 
 Updated `README.md` and `.ai-workflow/README.md` to reflect the current branch-first
 CLI behavior, add a new-repository installation path, add a post-install smoke test
-checklist, fix all stale workflow guidance, add post-install commit guidance, and add
-a configuration decision checklist.
+checklist, fix all stale workflow guidance, add post-install commit guidance with safe
+per-path staging instructions, and add a configuration decision checklist.
 
 ## Changed files
 
@@ -21,11 +21,15 @@ a configuration decision checklist.
   includes inline note explaining that `create` alone does not create a task branch.
 - **What to commit after installation (new)** — added `### What to commit after installation`
   subsection with separate blocks for new repos, existing repos (after merge-snippet
-  edits), and upgrades. Explicitly calls out that `board.md` must not be committed.
+  edits), and upgrades. The existing-repo and upgrade blocks use explicit per-path
+  staging (`git add .ai-workflow/scripts/ .ai-workflow/skills/ .ai-workflow/config.yaml
+  .ai-workflow/README.md`) to avoid accidentally staging project-owned `.ai-workflow/tasks/`
+  or generated `.ai-workflow/board.md`. Explicitly documents what not to commit.
 - **Configuration checklist (new)** — added `### Configuration checklist` subsection with
   a table covering all post-init decisions: `profile`, `workflow.mode`,
   `workflow.integration.mode`, `workflow.integration.provider`, `agents.*.default_tool`,
-  and `workflow.discovery.scope`.
+  `workflow.discovery.scope`, `workflow.discovery.remote`, and
+  `workflow.discovery.branch_prefix`.
 - **Basic commands: `approve` replaces `move AI-001 ready`** — the block describing
   `move AI-001 ready` is replaced by `approve AI-001`.
 - **`list` vs `list-branches` explanation** — expanded block-quote explaining when each
@@ -59,17 +63,17 @@ a configuration decision checklist.
 | Existing repository | README.md § "Existing repository" |
 | Upgrade | README.md § "Upgrade path" + "What to commit after installation" |
 | Post-install verification | README.md § "Post-install verification checklist" |
-| What to commit | README.md § "What to commit after installation" (new) |
-| Config decisions | README.md § "Configuration checklist" (new) |
+| What to commit | README.md § "What to commit after installation" |
+| Config decisions | README.md § "Configuration checklist" |
 | Ownership model | README.md § "Ownership model" |
 | Merge snippets for AGENTS.md, CLAUDE.md | `.ai-workflow/README.md` |
 
 ## Assumptions
 
-- `board.md` is generated/local and must not be committed; this is documented explicitly.
-- The configuration checklist covers every key that installers might need to customize;
-  no additional config keys need documentation here.
-- The `review` command's `--no-commit` flag is documented inline; no separate section needed.
+- The new-repo `git add .ai-workflow/` is safe because no task folders exist yet in a
+  fresh install. The existing-repo and upgrade cases use explicit per-path staging.
+- `board.md` is generated/local and must not be committed; documented explicitly.
+- The configuration checklist covers every key that installers might need to customize.
 
 ## Known risks
 
