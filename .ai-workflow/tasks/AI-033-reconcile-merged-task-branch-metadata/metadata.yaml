@@ -1,6 +1,6 @@
 id: "AI-033"
 title: "Reconcile merged task branch metadata"
-status: "ready"
+status: "in_progress"
 risk: "low"
 area:
   - workflow
