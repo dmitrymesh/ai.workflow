@@ -48,6 +48,24 @@ Task status is stored in `metadata.yaml` — the folder path never changes:
 
 ## Installation into a project
 
+### New repository
+
+For a brand-new git repository with no existing `AGENTS.md`, `CLAUDE.md`, or `.claude/`:
+
+```bash
+# Copy all protocol files
+python .ai-workflow/scripts/ai_task.py install-plan /path/to/newproject --apply
+
+# Initialise and verify
+cd /path/to/newproject
+python .ai-workflow/scripts/ai_task.py init --profile generic   # or: --profile unity
+python .ai-workflow/scripts/ai_task.py validate
+```
+
+All files are created fresh — no merge snippets are needed.
+
+### Existing repository
+
 > **Do not blindly copy files into an existing project.** Projects often already
 > have their own `AGENTS.md`, `CLAUDE.md`, `README.md`, or `.claude/` automation.
 > Overwriting these silently destroys project-specific context.
@@ -100,6 +118,36 @@ python .ai-workflow/scripts/ai_task.py validate
 python .ai-workflow/scripts/ai_task.py board
 ```
 
+### Post-install verification checklist
+
+After installing or upgrading, run these commands to confirm the protocol is functional:
+
+```bash
+# 1. Validate workflow state
+python .ai-workflow/scripts/ai_task.py validate
+
+# 2. Check role assignments
+python .ai-workflow/scripts/ai_task.py roles
+
+# 3. Create a disposable smoke-test task
+python .ai-workflow/scripts/ai_task.py create "Smoke test" --risk low
+#    → note the printed task ID, e.g. AI-001
+
+# 4. Approve it (human step)
+python .ai-workflow/scripts/ai_task.py approve AI-001
+
+# 5. Confirm it appears as ready in branch-first discovery
+python .ai-workflow/scripts/ai_task.py list-branches
+
+# 6. Clean up
+python .ai-workflow/scripts/ai_task.py move AI-001 rejected --force
+
+# 7. Validate again
+python .ai-workflow/scripts/ai_task.py validate
+```
+
+If both `validate` calls pass and `list-branches` showed the task as `ready`, the installation is working correctly.
+
 ### Upgrade path
 
 If `.ai-workflow/` is already installed:
@@ -135,13 +183,13 @@ Create a task:
 python .ai-workflow/scripts/ai_task.py create "Add RewardPreviewService" --risk low --area gameplay,tests
 ```
 
-Move a task:
+Approve a draft task (human step — moves `draft` → `ready` on the task branch):
 
 ```bash
-python .ai-workflow/scripts/ai_task.py move AI-001 ready
+python .ai-workflow/scripts/ai_task.py approve AI-001
 ```
 
-Claim a ready task (executor self-service — creates worktree, moves to `in_progress`):
+Claim a ready task (executor — creates or opens a worktree, moves to `in_progress`):
 
 ```bash
 python .ai-workflow/scripts/ai_task.py claim AI-001
@@ -172,7 +220,7 @@ Migrate tasks from the legacy status-by-directory layout to the current flat lay
 python .ai-workflow/scripts/ai_task.py migrate
 ```
 
-Discover active tasks from task branches (**branch-first workflow** — use this as your backlog view):
+Discover active tasks from task branches — use `list-branches` as your primary backlog view in branch-first mode:
 
 ```bash
 # All active task branches with status, title, and blockers
@@ -182,11 +230,13 @@ python .ai-workflow/scripts/ai_task.py list-branches
 python .ai-workflow/scripts/ai_task.py show-branch AI-001
 ```
 
-List tasks from the current checkout only (completed history and main-first active tasks; **not** a full backlog view in branch-first mode):
+List tasks from the current checkout only — useful for viewing completed history or when using the legacy main-first mode; **not** the full backlog view in branch-first mode:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py list
 ```
+
+> **`list` vs `list-branches`**: In branch-first mode, active tasks live on their own branches and are not tracked in `main`. `list` reads only from `main` and will show empty draft/ready/in-progress queues. Use `list-branches` to see all active tasks regardless of mode. Use `list` to browse completed history or when `workflow.mode = main_first`.
 
 Generate board:
 
@@ -318,13 +368,13 @@ The manager leaves the task in `draft` and reports that human approval is needed
 
 ### 2. Human approves task contract
 
-A human reviews `task.md` and, if the scope, requirements, acceptance criteria, and validation plan are acceptable, moves the task to `ready`:
+A human reviews `task.md` and, if the scope, requirements, acceptance criteria, and validation plan are acceptable, approves the task:
 
 ```bash
-python .ai-workflow/scripts/ai_task.py move AI-001 ready
+python .ai-workflow/scripts/ai_task.py approve AI-001
 ```
 
-Only a human should perform this step.
+`approve` moves `draft` → `ready` on the task branch. Only a human should perform this step.
 
 ### 3. Executor implements
 
@@ -335,30 +385,15 @@ python .ai-workflow/scripts/ai_task.py list-branches   # branch-first
 python .ai-workflow/scripts/ai_task.py list            # or main-first / history
 ```
 
-Then opens the task worktree. The method depends on the workflow mode
-(check `workflow.mode` in `.ai-workflow/config.yaml`):
-
-**Branch-first (`workflow.mode: branch_first`)** — the manager created the branch;
-open a worktree on the pre-existing branch from the main checkout:
-
-```bash
-git worktree add ../ai_workflow.worktrees/AI-001-<slug> ai/AI-001-<slug>
-cd ../ai_workflow.worktrees/AI-001-<slug>
-git branch --show-current   # must be ai/AI-001-<slug>
-
-python .ai-workflow/scripts/ai_task.py move AI-001 in_progress
-git add .ai-workflow/tasks/AI-001-<slug>/metadata.yaml
-git commit -m "chore: AI-001 | claim task to in_progress"
-```
-
-**Main-first (`workflow.mode: main_first` — legacy)** — run `claim` from the
-main checkout; it creates the branch, worktree, and copies the task folder:
+Run `claim` from the main checkout:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py claim AI-001
 cd <printed worktree path>
 git branch --show-current   # must match metadata.yaml.branch
 ```
+
+`claim` works in both workflow modes: in **branch-first** mode it opens a worktree on the pre-existing task branch; in **main-first** (legacy) mode it creates the branch and worktree automatically.
 
 The executor implements the task inside the worktree, writes `report.md` and
 `validation.md`, then **commits** those artifacts before submitting:
@@ -386,23 +421,18 @@ git diff main...ai/<task-id>-<slug>
 reviewer.md skill
 ```
 
-Then it writes `review.md` and `decision.yaml`, runs the review command, and
-**commits the artifacts to the task branch**:
+Then it writes `review.md` and `decision.yaml` and runs the review command.
+The `review` command **auto-commits** the artifacts to the task branch by default:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py review AI-001 --approve   # or --changes-requested
-
-git add .ai-workflow/tasks/AI-001-slug/review.md \
-        .ai-workflow/tasks/AI-001-slug/decision.yaml \
-        .ai-workflow/tasks/AI-001-slug/metadata.yaml
-git commit -m "review: AI-001 approve|changes-requested <short reason>"
 ```
+
+Add `--no-commit` to write artifacts without committing (useful for local inspection before committing manually).
 
 Decision must be one of: `approve`, `changes_requested`, `reject`.
 
-Committing the review artifacts to the task branch ensures the executor
-receives the feedback when they re-enter the worktree, and the complete
-record (contract → implementation → review) travels together to `main`.
+The auto-commit ensures the executor receives feedback when they re-enter the worktree, and the complete record (contract → implementation → review) travels together to `main`.
 
 ### 5. Human merges
 
@@ -531,8 +561,8 @@ Rules:
 - Do not expand scope.
 - Before editing, list planned files.
 - Do not modify forbidden Unity files unless task.md explicitly allows it.
-- Open the task worktree per executor.md (branch-first: git worktree add existing branch +
-  move in_progress; main-first: claim AI-001).
+- Run: python .ai-workflow/scripts/ai_task.py claim AI-001
+- cd to the printed worktree path. Verify: git branch --show-current must match metadata.yaml.branch.
 - Work inside the worktree. Verify the branch matches metadata.yaml.branch.
 - Write report.md and validation.md.
 - Commit implementation + report.md + validation.md to the task branch.

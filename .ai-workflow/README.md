@@ -145,8 +145,8 @@ python .ai-workflow/scripts/ai_task.py install-plan /path/to/target --apply
 # Manager: create the task contract (leaves it in draft)
 python .ai-workflow/scripts/ai_task.py create "Example task"
 
-# Human: review task.md and approve the contract by moving to ready
-python .ai-workflow/scripts/ai_task.py move AI-001 ready
+# Human: review task.md and approve the contract
+python .ai-workflow/scripts/ai_task.py approve AI-001
 
 # Executor: self-service claim — creates worktree, moves to in_progress
 python .ai-workflow/scripts/ai_task.py claim AI-001
