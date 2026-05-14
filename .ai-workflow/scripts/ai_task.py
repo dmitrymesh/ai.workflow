@@ -5,7 +5,8 @@ Portable AI Task Protocol CLI.
 Usage:
   python .ai-workflow/scripts/ai_task.py init --profile unity
   python .ai-workflow/scripts/ai_task.py create "Add RewardPreviewService" --risk low --area gameplay,tests
-  python .ai-workflow/scripts/ai_task.py move AI-001 ready
+  python .ai-workflow/scripts/ai_task.py approve AI-001
+  python .ai-workflow/scripts/ai_task.py approve AI-001 --print-only
   python .ai-workflow/scripts/ai_task.py claim AI-001
   python .ai-workflow/scripts/ai_task.py claim AI-001 --print-only
   python .ai-workflow/scripts/ai_task.py submit AI-001
@@ -21,6 +22,7 @@ Usage:
   python .ai-workflow/scripts/ai_task.py show AI-001
   python .ai-workflow/scripts/ai_task.py link AI-002 parent AI-001
   python .ai-workflow/scripts/ai_task.py unlink AI-002 parent
+  # Legacy (prefer 'claim' for the standard executor workflow):
   python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001
   python .ai-workflow/scripts/ai_task.py prepare-worktree AI-001 --print-only
   python .ai-workflow/scripts/ai_task.py install-plan /path/to/myproject

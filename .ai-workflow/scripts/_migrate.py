@@ -69,4 +69,7 @@ def migrate(args: argparse.Namespace | None = None) -> None:
             pass  # not empty — tasks were skipped or collided
 
     generate_board(print_result=False)
-    print(f"\nMigration complete: {moved} moved, {skipped} skipped.")
+    if moved == 0 and skipped == 0:
+        print("\nNothing to migrate — repo is already on the flat task layout.")
+    else:
+        print(f"\nMigration complete: {moved} moved, {skipped} skipped.")

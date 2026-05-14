@@ -2,9 +2,14 @@
 
 ## Local
 
-- Project compile: not run
-- Unit/EditMode tests: not run
-- Integration/PlayMode tests: not run
+- `python .ai-workflow/scripts/ai_task.py --help`: passed — no `move AI-001 ready`; `prepare-worktree` labeled legacy
+- `python .ai-workflow/scripts/ai_task.py migrate`: passed — prints "Nothing to migrate — repo is already on the flat task layout."
+- `python .ai-workflow/scripts/test_cascade.py`: passed (8 tests)
+- `python .ai-workflow/scripts/test_review.py`: passed (14 tests)
+- `python .ai-workflow/scripts/test_migrate.py`: passed (2 tests)
+- `python .ai-workflow/scripts/ai_task.py validate`: passed
+- `rg -n "move AI-001 ready" .ai-workflow/scripts/ai_task.py`: passed — no matches
+- `git diff --name-only main...HEAD`: passed — only in-scope files and task folder
 
 ## Human review
 
@@ -13,9 +18,9 @@
 
 ## Guardrails
 
-- Forbidden files changed: not checked
-- Package changes: not checked
+- Forbidden files changed: none
+- Package changes: none
 
 ## Notes
 
-None.
+No Unity code changed; recompile check not applicable.
