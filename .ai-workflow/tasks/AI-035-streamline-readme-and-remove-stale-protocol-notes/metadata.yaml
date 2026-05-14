@@ -1,0 +1,17 @@
+id: "AI-035"
+title: "Streamline README and remove stale protocol notes"
+status: "draft"
+risk: "low"
+area: [workflow, docs, maintenance]
+owner: null
+reviewer: null
+branch: null
+pr: null
+external_tracker: null
+parent: null
+children: []
+blocks: []
+blocked_by: []
+related: []
+created_at: "2026-05-14"
+updated_at: "2026-05-14"
