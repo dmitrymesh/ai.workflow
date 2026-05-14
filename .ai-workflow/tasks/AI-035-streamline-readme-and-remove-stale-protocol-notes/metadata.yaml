@@ -1,8 +1,11 @@
 id: "AI-035"
 title: "Streamline README and remove stale protocol notes"
-status: "draft"
+status: "ready"
 risk: "low"
-area: [workflow, docs, maintenance]
+area:
+  - workflow
+  - docs
+  - maintenance
 owner: null
 reviewer: null
 branch: null
