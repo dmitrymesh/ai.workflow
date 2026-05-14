@@ -179,7 +179,7 @@ tasks/<task-id>-<slug>/
   validation.md
 ```
 
-Migrate tasks from an older status-by-directory layout:
+**Legacy upgrade only** — migrate tasks from the old status-by-directory layout to the current flat layout:
 
 ```bash
 python .ai-workflow/scripts/ai_task.py migrate
@@ -319,34 +319,16 @@ The `decision.yaml` value distinguishes escalation (`escalated_to_human`) from n
 
 ## Git worktree execution workflow
 
-### Why worktrees?
+### Worktree rule
 
-The default protocol uses the main checkout as the execution environment. This
-is simple but has two problems:
-
-1. **Parallel executors**: multiple agents editing the same working tree
-   overwrite each other's changes.
-2. **Single executor, dirty main checkout**: the human may have uncommitted
-   edits, task-management changes, or experiments in the main checkout. These
-   will appear in the executor's diff and pollute the review.
-
-Git worktrees solve both problems: each task gets an isolated checkout backed
-by its own branch. The main checkout stays clean as the control plane for task
-creation, approval, review, and human coordination.
+Each task gets an isolated checkout backed by its own branch. The main checkout
+stays clean as the control plane for task creation, approval, review, and human
+coordination.
 
 **Rule**: task implementation work happens in task worktrees by default. Direct
 edits in the main checkout are the exception and must be documented in
 `report.md`.
 
-### Visibility constraint
-
-> A new worktree only sees committed branch state by default.
-
-If the human moves a task to `ready` but does not commit that change, the
-executor in a separate worktree will not see the approved `task.md`.
-
-**Solution**: the `claim` command explicitly copies the approved task folder
-from the main checkout into the worktree. No intermediate commit is required.
 
 ### Naming conventions
 
@@ -604,10 +586,8 @@ If any condition is in doubt, serialize.
 
 ## Branch-first workflow contract
 
-This section defines the contract for a branch-first task workflow. It is a
-design document that describes intended future behavior. Implementation lives
-in later tasks (AI-013, AI-014, AI-015). The `config.yaml` fields defined here
-are accepted by the schema but not yet enforced by the CLI unless noted.
+This section is the reference contract for the branch-first task workflow.
+All CLI commands and config keys described here are implemented and in use.
 
 ### Motivation: four problems from the main-first model
 
@@ -729,7 +709,7 @@ When `workflow.mode = branch_first`, executors must not rely on `main` to find
 `ready` tasks. Instead they use discovery commands that scan branches:
 
 ```bash
-# List all active task branches (future CLI — AI-013)
+# List all active task branches
 python .ai-workflow/scripts/ai_task.py list-branches
 
 # Show status of a specific branch without switching to it
@@ -799,17 +779,8 @@ default and the recommended mode for local-only or self-hosted projects.
 
 A hosted PR is opened against `main`. The PR is reviewed and merged through
 the hosting platform's UI. The `workflow.integration.provider` key selects
-the provider (`github`, `gitlab`, `gitea`).
-
-Future CLI support (AI-014) will include:
-
-```bash
-# Open a PR for the task branch (future CLI — AI-014)
-python .ai-workflow/scripts/ai_task.py open-pr AI-NNN
-```
-
-Until AI-014 is implemented, the human opens the PR manually using the hosting
-platform UI or the provider CLI (`gh pr create`, `glab mr create`, etc.).
+the provider (`github`, `gitlab`, `gitea`). Open the PR manually using the
+hosting platform UI or the provider CLI (`gh pr create`, `glab mr create`, etc.).
 
 Both modes preserve portability: a project can switch between `local_merge` and
 `pull_request` by changing one config key, without altering task data or protocol files.
@@ -843,10 +814,3 @@ All keys live under `workflow:` in `.ai-workflow/config.yaml`.
 
 ---
 
-### Future work (not in this task)
-
-| Task | Scope |
-|------|-------|
-| AI-013 | Implement `list-branches` and `show-branch` CLI commands for branch discovery. |
-| AI-014 | Implement `open-pr` CLI command for hosted PR integration. |
-| AI-015 | Update role skill files and agent adapter docs for branch-first mode. |

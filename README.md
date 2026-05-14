@@ -284,7 +284,7 @@ Reopen a `done` task for further changes (human pre-merge veto):
 python .ai-workflow/scripts/ai_task.py human-request-changes AI-001 --feedback "Please address X before merge"
 ```
 
-Migrate tasks from the legacy status-by-directory layout to the current flat layout:
+Migrate tasks from the legacy status-by-directory layout to the current flat layout (**legacy upgrade only** — not needed for new installs):
 
 ```bash
 python .ai-workflow/scripts/ai_task.py migrate
